@@ -17,6 +17,8 @@ const NAV_ITEMS: NavItem[] = [
 
 export function CoachShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isDashboardActive =
+    pathname === "/coach/dashboard" || pathname.startsWith("/coach/clients/");
   const isProgramsActive =
     pathname === "/coach/programs" || pathname.startsWith("/coach/programs/");
 
@@ -47,7 +49,12 @@ export function CoachShell() {
       >
         <ul className="mx-auto flex w-full max-w-3xl items-stretch">
           {NAV_ITEMS.map((item) => {
-            const active = item.to === "/coach/programs" ? isProgramsActive : pathname === item.to;
+            const active =
+              item.to === "/coach/programs"
+                ? isProgramsActive
+                : item.to === "/coach/dashboard"
+                  ? isDashboardActive
+                  : pathname === item.to;
             const Icon = item.icon;
             return (
               <li key={item.to} className="flex-1">

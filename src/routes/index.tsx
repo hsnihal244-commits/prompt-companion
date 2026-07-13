@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ensureMikeClient } from "@/lib/coach-clients";
 import {
   Dialog,
   DialogContent,
@@ -42,8 +43,16 @@ function EntryPage() {
         <p className="mt-3 text-sm text-muted-foreground">Choose how you want to continue.</p>
 
         <div className="mt-8 flex flex-col gap-3">
-          <Button size="lg" variant="default" onClick={() => setOpen(true)} className="w-full">
-            Sign Up / Log In as a Client
+          <Button
+            size="lg"
+            variant="default"
+            onClick={() => {
+              ensureMikeClient();
+              setOpen(true);
+            }}
+            className="w-full"
+          >
+            Client Mode
           </Button>
           <Button
             size="lg"
@@ -59,8 +68,11 @@ function EntryPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Client experience coming soon</DialogTitle>
-            <DialogDescription>Client sign-up and login are not available yet.</DialogDescription>
+            <DialogTitle>Client Mode</DialogTitle>
+            <DialogDescription>
+              The local placeholder client account Mike is ready. The full client experience will be
+              added in the next phase.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setOpen(false)}>Got it</Button>
