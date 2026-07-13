@@ -140,5 +140,21 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    -webkit-touch-callout: none;
+  }
+
+  body,
+  body * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
   }
 }

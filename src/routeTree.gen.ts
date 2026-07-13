@@ -16,6 +16,7 @@ import { Route as CoachExercisesRouteImport } from './routes/coach.exercises'
 import { Route as CoachDashboardRouteImport } from './routes/coach.dashboard'
 import { Route as CoachProgramsIndexRouteImport } from './routes/coach.programs.index'
 import { Route as CoachProgramsProgramIdRouteImport } from './routes/coach.programs.$programId'
+import { Route as CoachClientsClientIdRouteImport } from './routes/coach.clients.$clientId'
 import { Route as CoachProgramsProgramIdIndexRouteImport } from './routes/coach.programs.$programId.index'
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId'
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdIndexRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId.index'
@@ -56,6 +57,11 @@ const CoachProgramsProgramIdRoute = CoachProgramsProgramIdRouteImport.update({
   path: '/$programId',
   getParentRoute: () => CoachProgramsRoute,
 } as any)
+const CoachClientsClientIdRoute = CoachClientsClientIdRouteImport.update({
+  id: '/clients/$clientId',
+  path: '/clients/$clientId',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachProgramsProgramIdIndexRoute =
   CoachProgramsProgramIdIndexRouteImport.update({
     id: '/',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/programs': typeof CoachProgramsRouteWithChildren
+  '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
   '/coach/programs/$programId': typeof CoachProgramsProgramIdRouteWithChildren
   '/coach/programs/': typeof CoachProgramsIndexRoute
   '/coach/programs/$programId/': typeof CoachProgramsProgramIdIndexRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/coach': typeof CoachRouteWithChildren
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
+  '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
   '/coach/programs': typeof CoachProgramsIndexRoute
   '/coach/programs/$programId': typeof CoachProgramsProgramIdIndexRoute
   '/coach/programs/$programId/workouts/$workoutId/preview': typeof CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/programs': typeof CoachProgramsRouteWithChildren
+  '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
   '/coach/programs/$programId': typeof CoachProgramsProgramIdRouteWithChildren
   '/coach/programs/': typeof CoachProgramsIndexRoute
   '/coach/programs/$programId/': typeof CoachProgramsProgramIdIndexRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/programs'
+    | '/coach/clients/$clientId'
     | '/coach/programs/$programId'
     | '/coach/programs/'
     | '/coach/programs/$programId/'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/coach/dashboard'
     | '/coach/exercises'
+    | '/coach/clients/$clientId'
     | '/coach/programs'
     | '/coach/programs/$programId'
     | '/coach/programs/$programId/workouts/$workoutId/preview'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/programs'
+    | '/coach/clients/$clientId'
     | '/coach/programs/$programId'
     | '/coach/programs/'
     | '/coach/programs/$programId/'
@@ -212,6 +224,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/programs/$programId'
       preLoaderRoute: typeof CoachProgramsProgramIdRouteImport
       parentRoute: typeof CoachProgramsRoute
+    }
+    '/coach/clients/$clientId': {
+      id: '/coach/clients/$clientId'
+      path: '/clients/$clientId'
+      fullPath: '/coach/clients/$clientId'
+      preLoaderRoute: typeof CoachClientsClientIdRouteImport
+      parentRoute: typeof CoachRoute
     }
     '/coach/programs/$programId/': {
       id: '/coach/programs/$programId/'
@@ -297,12 +316,14 @@ interface CoachRouteChildren {
   CoachDashboardRoute: typeof CoachDashboardRoute
   CoachExercisesRoute: typeof CoachExercisesRoute
   CoachProgramsRoute: typeof CoachProgramsRouteWithChildren
+  CoachClientsClientIdRoute: typeof CoachClientsClientIdRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
   CoachDashboardRoute: CoachDashboardRoute,
   CoachExercisesRoute: CoachExercisesRoute,
   CoachProgramsRoute: CoachProgramsRouteWithChildren,
+  CoachClientsClientIdRoute: CoachClientsClientIdRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
@@ -314,3 +335,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

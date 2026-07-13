@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PagePlaceholder } from "@/components/coach/PagePlaceholder";
+import { CoachDashboard } from "@/components/coach/CoachDashboard";
 
 export const Route = createFileRoute("/coach/dashboard")({
   head: () => ({
@@ -7,16 +7,8 @@ export const Route = createFileRoute("/coach/dashboard")({
       { title: "Dashboard — No More Copium" },
       { name: "description", content: "Coach dashboard in No More Copium." },
       { property: "og:title", content: "Dashboard — No More Copium" },
-      {
-        property: "og:description",
-        content: "Coach dashboard in No More Copium.",
-      },
+      { property: "og:description", content: "Coach dashboard in No More Copium." },
     ],
   }),
-  component: () => (
-    <PagePlaceholder
-      title="Dashboard"
-      description="Coach dashboard features will be added in a future phase."
-    />
-  ),
+  component: CoachDashboard,
 });
