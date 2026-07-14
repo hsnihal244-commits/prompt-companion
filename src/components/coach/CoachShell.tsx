@@ -1,6 +1,7 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, ListChecks, Dumbbell } from "lucide-react";
-import type { ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
+import { useAccount } from "@/components/account/AccountProvider";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -17,10 +18,22 @@ const NAV_ITEMS: NavItem[] = [
 
 export function CoachShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const { account, loading } = useAccount();
+
+  useEffect(() => {
+    if (!loading && account?.role !== "coach") {
+      void navigate({ to: "/", replace: true });
+    }
+  }, [account?.role, loading, navigate]);
   const isDashboardActive =
     pathname === "/coach/dashboard" || pathname.startsWith("/coach/clients/");
   const isProgramsActive =
     pathname === "/coach/programs" || pathname.startsWith("/coach/programs/");
+
+  if (loading || account?.role !== "coach") {
+    return <div className="min-h-[100dvh] bg-background" />;
+  }
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background">

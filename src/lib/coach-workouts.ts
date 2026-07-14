@@ -1,4 +1,5 @@
 import { DEFAULT_WEIGHT_UNIT_ID } from "./coach-weight-units";
+import { emitCloudDataChanged } from "./cloud-events";
 
 export type SetType = "warmup" | "normal" | "superset" | "alternating";
 export type Intensity = "2rir" | "1rir" | "failure";
@@ -193,6 +194,7 @@ export function saveWorkouts(workouts: ProgramWorkout[]): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(WORKOUTS_STORAGE_KEY, JSON.stringify(workouts));
+    emitCloudDataChanged("workouts");
   } catch {
     // Storage can be unavailable or full; the in-memory editor remains usable.
   }

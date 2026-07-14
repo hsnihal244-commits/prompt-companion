@@ -1,22 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Users } from "lucide-react";
-import { type ClientAccount, loadClients } from "@/lib/coach-clients";
+import { type AppAccount, fetchAccounts } from "@/lib/cloud-accounts";
 
 export function CoachDashboard() {
-  const [clients, setClients] = useState<ClientAccount[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [clients, setClients] = useState<AppAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setClients(loadClients());
-    setHydrated(true);
+    fetchAccounts()
+      .then((accounts) => setClients(accounts.filter((account) => account.role === "client")))
+      .catch((nextError: unknown) => {
+        console.error(nextError);
+        setError("Clients could not be loaded from Cloud.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <section className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage your local clients.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Manage your clients.</p>
       </div>
 
       <section aria-labelledby="clients-heading" className="space-y-3">
@@ -24,17 +30,21 @@ export function CoachDashboard() {
           <h2 id="clients-heading" className="text-lg font-semibold text-foreground">
             Clients
           </h2>
-          {hydrated && clients.length > 0 && (
+          {!loading && clients.length > 0 && (
             <span className="text-sm text-muted-foreground">{clients.length}</span>
           )}
         </div>
 
-        {!hydrated ? null : clients.length === 0 ? (
+        {error ? (
+          <p className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+            {error}
+          </p>
+        ) : loading ? null : clients.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-8 text-center">
             <Users className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden="true" />
             <h3 className="mt-3 text-sm font-medium text-foreground">No clients yet</h3>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              Open Client Mode from the entry screen to create the local Mike account.
+              Create a Client account from the account picker to see it here.
             </p>
           </div>
         ) : (
@@ -48,10 +58,9 @@ export function CoachDashboard() {
                   aria-label={`Manage ${client.username}`}
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {client.username}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="truncate text-sm font-medium text-foreground">{client.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">@{client.username}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {client.assignedProgramId ? "Program assigned" : "No program assigned"}
                     </p>
                   </div>

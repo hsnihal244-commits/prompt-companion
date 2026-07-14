@@ -1,3 +1,5 @@
+import { emitCloudDataChanged } from "./cloud-events";
+
 export type Weekday =
   "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
 
@@ -131,6 +133,7 @@ export function savePrograms(programs: ProgramSummary[]): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(PROGRAMS_STORAGE_KEY, JSON.stringify(programs));
+    emitCloudDataChanged("programs");
   } catch {
     // ignore quota / access errors
   }
