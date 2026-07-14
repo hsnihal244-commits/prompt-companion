@@ -129,6 +129,24 @@ export function loadPrograms(): ProgramSummary[] {
   }
 }
 
+export function removeWorkoutFromAssignments(
+  programs: ProgramSummary[],
+  workoutId: string,
+): ProgramSummary[] {
+  return programs.map((program) => {
+    const nextAssignments = { ...program.dayAssignments };
+    let changed = false;
+    for (const weekday of WEEKDAYS) {
+      const assignment = nextAssignments[weekday];
+      if (assignment?.type === "workout" && assignment.workoutId === workoutId) {
+        delete nextAssignments[weekday];
+        changed = true;
+      }
+    }
+    return changed ? { ...program, dayAssignments: nextAssignments } : program;
+  });
+}
+
 export function savePrograms(programs: ProgramSummary[]): void {
   if (typeof window === "undefined") return;
   try {

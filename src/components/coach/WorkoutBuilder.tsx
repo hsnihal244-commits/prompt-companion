@@ -46,6 +46,7 @@ import {
   type WorkoutSetPrescription,
   createDefaultSet,
   createExerciseInstance,
+  isWorkoutNameAvailable,
   loadWorkouts,
   saveWorkouts,
   touchWorkout,
@@ -62,7 +63,13 @@ import { ExerciseFormDialog, type ExerciseFormValues } from "./ExerciseFormDialo
 import { RestDurationPicker } from "./RestDurationPicker";
 import { WeightInputWithUnit } from "./WeightInputWithUnit";
 
-export function WorkoutBuilder({ programId, workoutId }: { programId: string; workoutId: string }) {
+export function WorkoutBuilder({
+  programId,
+  workoutId,
+}: {
+  programId?: string;
+  workoutId: string;
+}) {
   const [workouts, setWorkouts] = useState<ProgramWorkout[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [customWeightUnits, setCustomWeightUnits] = useState<WeightUnit[]>([]);
@@ -83,7 +90,7 @@ export function WorkoutBuilder({ programId, workoutId }: { programId: string; wo
     saveCustomWeightUnits(customWeightUnits);
   }, [workouts, customWeightUnits, hydrated]);
 
-  const workout = workouts.find((w) => w.id === workoutId && w.programId === programId);
+  const workout = workouts.find((candidate) => candidate.id === workoutId);
   const exercisesById = useMemo(() => {
     const m = new Map<string, Exercise>();
     for (const e of exercises) m.set(e.id, e);
@@ -154,29 +161,54 @@ export function WorkoutBuilder({ programId, workoutId }: { programId: string; wo
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/coach/programs/$programId"
-        params={{ programId }}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to program
-      </Link>
+      {programId ? (
+        <Link
+          to="/coach/programs/$programId"
+          params={{ programId }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back to program
+        </Link>
+      ) : (
+        <Link
+          to="/coach/library/workouts"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back to Workout Library
+        </Link>
+      )}
 
       <div className="space-y-3">
-        <WorkoutTitle name={workout.name} onRename={renameWorkout} />
+        <WorkoutTitle
+          name={workout.name}
+          onRename={renameWorkout}
+          validateName={(name) =>
+            isWorkoutNameAvailable(workouts, name, workout.id)
+              ? null
+              : "A workout with this name already exists."
+          }
+        />
         <p className="text-xs text-muted-foreground">Changes save automatically.</p>
         <Button
           type="button"
           variant="secondary"
           className="w-full sm:w-auto"
           disabled={!hasAnyValidSet(workout)}
-          onClick={() =>
-            void navigate({
-              to: "/coach/programs/$programId/workouts/$workoutId/preview",
-              params: { programId, workoutId },
-            })
-          }
+          onClick={() => {
+            if (programId) {
+              void navigate({
+                to: "/coach/programs/$programId/workouts/$workoutId/preview",
+                params: { programId, workoutId },
+              });
+            } else {
+              void navigate({
+                to: "/coach/library/workouts/$workoutId/preview",
+                params: { workoutId },
+              });
+            }
+          }}
         >
           <PlayCircle className="h-4 w-4" aria-hidden="true" />
           Preview workout
@@ -252,7 +284,15 @@ export function WorkoutBuilder({ programId, workoutId }: { programId: string; wo
   );
 }
 
-function WorkoutTitle({ name, onRename }: { name: string; onRename: (name: string) => void }) {
+function WorkoutTitle({
+  name,
+  onRename,
+  validateName,
+}: {
+  name: string;
+  onRename: (name: string) => void;
+  validateName: (name: string) => string | null;
+}) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
   const [error, setError] = useState<string | null>(null);
@@ -274,6 +314,11 @@ function WorkoutTitle({ name, onRename }: { name: string; onRename: (name: strin
     }
     if (trimmed.length > WORKOUT_NAME_MAX_LENGTH) {
       setError(`Keep the name to ${WORKOUT_NAME_MAX_LENGTH} characters or fewer.`);
+      return;
+    }
+    const validationError = validateName(trimmed);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     if (trimmed !== name) onRename(trimmed);
@@ -344,17 +389,27 @@ function WorkoutTitle({ name, onRename }: { name: string; onRename: (name: strin
   );
 }
 
-function WorkoutNotFound({ programId }: { programId: string }) {
+function WorkoutNotFound({ programId }: { programId?: string }) {
   return (
     <div className="space-y-6">
-      <Link
-        to="/coach/programs/$programId"
-        params={{ programId }}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to program
-      </Link>
+      {programId ? (
+        <Link
+          to="/coach/programs/$programId"
+          params={{ programId }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back to program
+        </Link>
+      ) : (
+        <Link
+          to="/coach/library/workouts"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back to Workout Library
+        </Link>
+      )}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Workout not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">

@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,16 +13,30 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  type ProgramSummary,
+  loadPrograms,
+  removeWorkoutFromAssignments,
+  savePrograms,
+} from "@/lib/coach-programs";
+import {
   type ProgramWorkout,
   WORKOUT_NAME_MAX_LENGTH,
   createWorkout,
+  isWorkoutNameAvailable,
   loadWorkouts,
   saveWorkouts,
-  workoutsForProgram,
+  sortWorkouts,
 } from "@/lib/coach-workouts";
 
-export function ProgramWorkoutsSection({ programId }: { programId: string }) {
+export function ProgramWorkoutsSection({
+  programId,
+  showHeading = true,
+}: {
+  programId?: string;
+  showHeading?: boolean;
+}) {
   const [workouts, setWorkouts] = useState<ProgramWorkout[]>([]);
+  const [programs, setPrograms] = useState<ProgramSummary[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ProgramWorkout | null>(null);
@@ -30,52 +44,79 @@ export function ProgramWorkoutsSection({ programId }: { programId: string }) {
 
   useEffect(() => {
     setWorkouts(loadWorkouts());
+    setPrograms(loadPrograms());
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) saveWorkouts(workouts);
-  }, [workouts, hydrated]);
+    if (!hydrated) return;
+    saveWorkouts(workouts);
+    savePrograms(programs);
+  }, [workouts, programs, hydrated]);
 
-  const programWorkouts = useMemo(
-    () => workoutsForProgram(workouts, programId),
-    [workouts, programId],
-  );
+  const globalWorkouts = useMemo(() => sortWorkouts(workouts), [workouts]);
 
-  const handleCreate = (name: string) => {
-    const workout = createWorkout({ programId, name });
+  const openWorkout = (workoutId: string) => {
+    if (programId) {
+      void navigate({
+        to: "/coach/programs/$programId/workouts/$workoutId",
+        params: { programId, workoutId },
+      });
+    } else {
+      void navigate({
+        to: "/coach/library/workouts/$workoutId",
+        params: { workoutId },
+      });
+    }
+  };
+
+  const handleCreate = (name: string): string | null => {
+    if (!isWorkoutNameAvailable(workouts, name)) {
+      return "A workout with this name already exists.";
+    }
+    const workout = createWorkout({ name });
     const next = [...workouts, workout];
     saveWorkouts(next);
     setWorkouts(next);
     setDialogOpen(false);
-    void navigate({
-      to: "/coach/programs/$programId/workouts/$workoutId",
-      params: { programId, workoutId: workout.id },
-    });
+    openWorkout(workout.id);
+    return null;
   };
 
   const handleDelete = (id: string) => {
-    setWorkouts((prev) => prev.filter((w) => w.id !== id));
+    const nextWorkouts = workouts.filter((workout) => workout.id !== id);
+    const nextPrograms = removeWorkoutFromAssignments(programs, id);
+    saveWorkouts(nextWorkouts);
+    savePrograms(nextPrograms);
+    setWorkouts(nextWorkouts);
+    setPrograms(nextPrograms);
     setPendingDelete(null);
+    window.dispatchEvent(new Event("no-more-copium:workout-library-updated"));
   };
 
   return (
-    <section aria-labelledby="workouts-heading" className="space-y-3">
+    <section aria-labelledby={showHeading ? "workouts-heading" : undefined} className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 id="workouts-heading" className="text-lg font-semibold text-foreground">
-          Workouts
-        </h2>
-        {hydrated && programWorkouts.length > 0 && (
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
+        {showHeading && (
+          <h2 id="workouts-heading" className="text-lg font-semibold text-foreground">
+            Workouts
+          </h2>
+        )}
+        {hydrated && globalWorkouts.length > 0 && (
+          <Button
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+            className={!showHeading ? "ml-auto" : ""}
+          >
             <Plus className="h-4 w-4" aria-hidden="true" />
             Add
           </Button>
         )}
       </div>
 
-      {!hydrated ? null : programWorkouts.length === 0 ? (
+      {!hydrated ? null : globalWorkouts.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">No workouts in this program yet.</p>
+          <p className="text-sm text-muted-foreground">No workouts in your library yet.</p>
           <Button className="mt-4" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             Create workout
@@ -83,20 +124,20 @@ export function ProgramWorkoutsSection({ programId }: { programId: string }) {
         </div>
       ) : (
         <ul role="list" className="divide-y divide-border rounded-lg border border-border">
-          {programWorkouts.map((w) => (
-            <li key={w.id} className="flex items-center gap-1 pr-2">
-              <Link
-                to="/coach/programs/$programId/workouts/$workoutId"
-                params={{ programId, workoutId: w.id }}
-                className="min-w-0 flex-1 truncate px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          {globalWorkouts.map((workout) => (
+            <li key={workout.id} className="flex items-center gap-1 pr-2">
+              <button
+                type="button"
+                onClick={() => openWorkout(workout.id)}
+                className="min-w-0 flex-1 truncate px-4 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
-                {w.name}
-              </Link>
+                {workout.name}
+              </button>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setPendingDelete(w)}
-                aria-label={`Delete ${w.name}`}
+                onClick={() => setPendingDelete(workout)}
+                aria-label={`Delete ${workout.name}`}
                 className="shrink-0 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -108,12 +149,17 @@ export function ProgramWorkoutsSection({ programId }: { programId: string }) {
 
       <CreateWorkoutDialog open={dialogOpen} onOpenChange={setDialogOpen} onCreate={handleCreate} />
 
-      <Dialog open={pendingDelete !== null} onOpenChange={(o) => !o && setPendingDelete(null)}>
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete workout?</DialogTitle>
+            <DialogTitle>Delete workout globally?</DialogTitle>
             <DialogDescription>
-              {pendingDelete ? `"${pendingDelete.name}" will be removed from this program.` : ""}
+              {pendingDelete
+                ? `“${pendingDelete.name}” will be removed from the Workout Library and cleared from every program day that uses it.`
+                : ""}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -124,7 +170,7 @@ export function ProgramWorkoutsSection({ programId }: { programId: string }) {
               variant="destructive"
               onClick={() => pendingDelete && handleDelete(pendingDelete.id)}
             >
-              Delete
+              Delete globally
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -140,7 +186,7 @@ function CreateWorkoutDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (name: string) => void;
+  onCreate: (name: string) => string | null;
 }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -154,10 +200,10 @@ function CreateWorkoutDialog({
     }
   }, [open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     const trimmed = value.trim();
-    if (trimmed.length === 0) {
+    if (!trimmed) {
       setError("Please enter a workout name.");
       return;
     }
@@ -165,18 +211,15 @@ function CreateWorkoutDialog({
       setError(`Keep the name to ${WORKOUT_NAME_MAX_LENGTH} characters or fewer.`);
       return;
     }
-    onCreate(trimmed);
+    setError(onCreate(trimmed));
   };
-
-  const trimmedLength = value.trim().length;
-  const disabled = trimmedLength === 0 || trimmedLength > WORKOUT_NAME_MAX_LENGTH;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-sm"
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
           inputRef.current?.focus();
         }}
       >
@@ -190,11 +233,10 @@ function CreateWorkoutDialog({
               id="workout-name"
               ref={inputRef}
               value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
+              onChange={(event) => {
+                setValue(event.target.value);
                 if (error) setError(null);
               }}
-              placeholder="e.g. Push Day A"
               maxLength={WORKOUT_NAME_MAX_LENGTH + 20}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? errorId : undefined}
@@ -210,7 +252,7 @@ function CreateWorkoutDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={disabled}>
+            <Button type="submit" disabled={!value.trim()}>
               Create workout
             </Button>
           </DialogFooter>

@@ -13,14 +13,22 @@ import { Route as CoachRouteImport } from './routes/coach'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachProgramsRouteImport } from './routes/coach.programs'
+import { Route as CoachLibraryRouteImport } from './routes/coach.library'
 import { Route as CoachExercisesRouteImport } from './routes/coach.exercises'
 import { Route as CoachDashboardRouteImport } from './routes/coach.dashboard'
 import { Route as ClientDashboardRouteImport } from './routes/client.dashboard'
 import { Route as CoachProgramsIndexRouteImport } from './routes/coach.programs.index'
+import { Route as CoachLibraryIndexRouteImport } from './routes/coach.library.index'
 import { Route as CoachProgramsProgramIdRouteImport } from './routes/coach.programs.$programId'
+import { Route as CoachLibraryWorkoutsRouteImport } from './routes/coach.library.workouts'
+import { Route as CoachLibraryExercisesRouteImport } from './routes/coach.library.exercises'
 import { Route as CoachClientsClientIdRouteImport } from './routes/coach.clients.$clientId'
 import { Route as CoachProgramsProgramIdIndexRouteImport } from './routes/coach.programs.$programId.index'
+import { Route as CoachLibraryWorkoutsIndexRouteImport } from './routes/coach.library.workouts.index'
+import { Route as CoachLibraryWorkoutsWorkoutIdRouteImport } from './routes/coach.library.workouts.$workoutId'
+import { Route as CoachLibraryWorkoutsWorkoutIdIndexRouteImport } from './routes/coach.library.workouts.$workoutId.index'
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId'
+import { Route as CoachLibraryWorkoutsWorkoutIdPreviewRouteImport } from './routes/coach.library.workouts.$workoutId.preview'
 import { Route as ClientProgramsProgramIdWorkoutsWorkoutIdRouteImport } from './routes/client.programs.$programId.workouts.$workoutId'
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdIndexRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId.index'
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId.preview'
@@ -45,6 +53,11 @@ const CoachProgramsRoute = CoachProgramsRouteImport.update({
   path: '/programs',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachLibraryRoute = CoachLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachExercisesRoute = CoachExercisesRouteImport.update({
   id: '/exercises',
   path: '/exercises',
@@ -65,10 +78,25 @@ const CoachProgramsIndexRoute = CoachProgramsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CoachProgramsRoute,
 } as any)
+const CoachLibraryIndexRoute = CoachLibraryIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachLibraryRoute,
+} as any)
 const CoachProgramsProgramIdRoute = CoachProgramsProgramIdRouteImport.update({
   id: '/$programId',
   path: '/$programId',
   getParentRoute: () => CoachProgramsRoute,
+} as any)
+const CoachLibraryWorkoutsRoute = CoachLibraryWorkoutsRouteImport.update({
+  id: '/workouts',
+  path: '/workouts',
+  getParentRoute: () => CoachLibraryRoute,
+} as any)
+const CoachLibraryExercisesRoute = CoachLibraryExercisesRouteImport.update({
+  id: '/exercises',
+  path: '/exercises',
+  getParentRoute: () => CoachLibraryRoute,
 } as any)
 const CoachClientsClientIdRoute = CoachClientsClientIdRouteImport.update({
   id: '/clients/$clientId',
@@ -81,11 +109,35 @@ const CoachProgramsProgramIdIndexRoute =
     path: '/',
     getParentRoute: () => CoachProgramsProgramIdRoute,
   } as any)
+const CoachLibraryWorkoutsIndexRoute =
+  CoachLibraryWorkoutsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => CoachLibraryWorkoutsRoute,
+  } as any)
+const CoachLibraryWorkoutsWorkoutIdRoute =
+  CoachLibraryWorkoutsWorkoutIdRouteImport.update({
+    id: '/$workoutId',
+    path: '/$workoutId',
+    getParentRoute: () => CoachLibraryWorkoutsRoute,
+  } as any)
+const CoachLibraryWorkoutsWorkoutIdIndexRoute =
+  CoachLibraryWorkoutsWorkoutIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => CoachLibraryWorkoutsWorkoutIdRoute,
+  } as any)
 const CoachProgramsProgramIdWorkoutsWorkoutIdRoute =
   CoachProgramsProgramIdWorkoutsWorkoutIdRouteImport.update({
     id: '/workouts/$workoutId',
     path: '/workouts/$workoutId',
     getParentRoute: () => CoachProgramsProgramIdRoute,
+  } as any)
+const CoachLibraryWorkoutsWorkoutIdPreviewRoute =
+  CoachLibraryWorkoutsWorkoutIdPreviewRouteImport.update({
+    id: '/preview',
+    path: '/preview',
+    getParentRoute: () => CoachLibraryWorkoutsWorkoutIdRoute,
   } as any)
 const ClientProgramsProgramIdWorkoutsWorkoutIdRoute =
   ClientProgramsProgramIdWorkoutsWorkoutIdRouteImport.update({
@@ -113,13 +165,21 @@ export interface FileRoutesByFullPath {
   '/client/dashboard': typeof ClientDashboardRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
+  '/coach/library': typeof CoachLibraryRouteWithChildren
   '/coach/programs': typeof CoachProgramsRouteWithChildren
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
+  '/coach/library/exercises': typeof CoachLibraryExercisesRoute
+  '/coach/library/workouts': typeof CoachLibraryWorkoutsRouteWithChildren
   '/coach/programs/$programId': typeof CoachProgramsProgramIdRouteWithChildren
+  '/coach/library/': typeof CoachLibraryIndexRoute
   '/coach/programs/': typeof CoachProgramsIndexRoute
+  '/coach/library/workouts/$workoutId': typeof CoachLibraryWorkoutsWorkoutIdRouteWithChildren
+  '/coach/library/workouts/': typeof CoachLibraryWorkoutsIndexRoute
   '/coach/programs/$programId/': typeof CoachProgramsProgramIdIndexRoute
   '/client/programs/$programId/workouts/$workoutId': typeof ClientProgramsProgramIdWorkoutsWorkoutIdRoute
+  '/coach/library/workouts/$workoutId/preview': typeof CoachLibraryWorkoutsWorkoutIdPreviewRoute
   '/coach/programs/$programId/workouts/$workoutId': typeof CoachProgramsProgramIdWorkoutsWorkoutIdRouteWithChildren
+  '/coach/library/workouts/$workoutId/': typeof CoachLibraryWorkoutsWorkoutIdIndexRoute
   '/coach/programs/$programId/workouts/$workoutId/preview': typeof CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute
   '/coach/programs/$programId/workouts/$workoutId/': typeof CoachProgramsProgramIdWorkoutsWorkoutIdIndexRoute
 }
@@ -131,9 +191,14 @@ export interface FileRoutesByTo {
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
+  '/coach/library/exercises': typeof CoachLibraryExercisesRoute
+  '/coach/library': typeof CoachLibraryIndexRoute
   '/coach/programs': typeof CoachProgramsIndexRoute
+  '/coach/library/workouts': typeof CoachLibraryWorkoutsIndexRoute
   '/coach/programs/$programId': typeof CoachProgramsProgramIdIndexRoute
   '/client/programs/$programId/workouts/$workoutId': typeof ClientProgramsProgramIdWorkoutsWorkoutIdRoute
+  '/coach/library/workouts/$workoutId/preview': typeof CoachLibraryWorkoutsWorkoutIdPreviewRoute
+  '/coach/library/workouts/$workoutId': typeof CoachLibraryWorkoutsWorkoutIdIndexRoute
   '/coach/programs/$programId/workouts/$workoutId/preview': typeof CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute
   '/coach/programs/$programId/workouts/$workoutId': typeof CoachProgramsProgramIdWorkoutsWorkoutIdIndexRoute
 }
@@ -145,13 +210,21 @@ export interface FileRoutesById {
   '/client/dashboard': typeof ClientDashboardRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
+  '/coach/library': typeof CoachLibraryRouteWithChildren
   '/coach/programs': typeof CoachProgramsRouteWithChildren
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
+  '/coach/library/exercises': typeof CoachLibraryExercisesRoute
+  '/coach/library/workouts': typeof CoachLibraryWorkoutsRouteWithChildren
   '/coach/programs/$programId': typeof CoachProgramsProgramIdRouteWithChildren
+  '/coach/library/': typeof CoachLibraryIndexRoute
   '/coach/programs/': typeof CoachProgramsIndexRoute
+  '/coach/library/workouts/$workoutId': typeof CoachLibraryWorkoutsWorkoutIdRouteWithChildren
+  '/coach/library/workouts/': typeof CoachLibraryWorkoutsIndexRoute
   '/coach/programs/$programId/': typeof CoachProgramsProgramIdIndexRoute
   '/client/programs/$programId/workouts/$workoutId': typeof ClientProgramsProgramIdWorkoutsWorkoutIdRoute
+  '/coach/library/workouts/$workoutId/preview': typeof CoachLibraryWorkoutsWorkoutIdPreviewRoute
   '/coach/programs/$programId/workouts/$workoutId': typeof CoachProgramsProgramIdWorkoutsWorkoutIdRouteWithChildren
+  '/coach/library/workouts/$workoutId/': typeof CoachLibraryWorkoutsWorkoutIdIndexRoute
   '/coach/programs/$programId/workouts/$workoutId/preview': typeof CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute
   '/coach/programs/$programId/workouts/$workoutId/': typeof CoachProgramsProgramIdWorkoutsWorkoutIdIndexRoute
 }
@@ -164,13 +237,21 @@ export interface FileRouteTypes {
     | '/client/dashboard'
     | '/coach/dashboard'
     | '/coach/exercises'
+    | '/coach/library'
     | '/coach/programs'
     | '/coach/clients/$clientId'
+    | '/coach/library/exercises'
+    | '/coach/library/workouts'
     | '/coach/programs/$programId'
+    | '/coach/library/'
     | '/coach/programs/'
+    | '/coach/library/workouts/$workoutId'
+    | '/coach/library/workouts/'
     | '/coach/programs/$programId/'
     | '/client/programs/$programId/workouts/$workoutId'
+    | '/coach/library/workouts/$workoutId/preview'
     | '/coach/programs/$programId/workouts/$workoutId'
+    | '/coach/library/workouts/$workoutId/'
     | '/coach/programs/$programId/workouts/$workoutId/preview'
     | '/coach/programs/$programId/workouts/$workoutId/'
   fileRoutesByTo: FileRoutesByTo
@@ -182,9 +263,14 @@ export interface FileRouteTypes {
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/clients/$clientId'
+    | '/coach/library/exercises'
+    | '/coach/library'
     | '/coach/programs'
+    | '/coach/library/workouts'
     | '/coach/programs/$programId'
     | '/client/programs/$programId/workouts/$workoutId'
+    | '/coach/library/workouts/$workoutId/preview'
+    | '/coach/library/workouts/$workoutId'
     | '/coach/programs/$programId/workouts/$workoutId/preview'
     | '/coach/programs/$programId/workouts/$workoutId'
   id:
@@ -195,13 +281,21 @@ export interface FileRouteTypes {
     | '/client/dashboard'
     | '/coach/dashboard'
     | '/coach/exercises'
+    | '/coach/library'
     | '/coach/programs'
     | '/coach/clients/$clientId'
+    | '/coach/library/exercises'
+    | '/coach/library/workouts'
     | '/coach/programs/$programId'
+    | '/coach/library/'
     | '/coach/programs/'
+    | '/coach/library/workouts/$workoutId'
+    | '/coach/library/workouts/'
     | '/coach/programs/$programId/'
     | '/client/programs/$programId/workouts/$workoutId'
+    | '/coach/library/workouts/$workoutId/preview'
     | '/coach/programs/$programId/workouts/$workoutId'
+    | '/coach/library/workouts/$workoutId/'
     | '/coach/programs/$programId/workouts/$workoutId/preview'
     | '/coach/programs/$programId/workouts/$workoutId/'
   fileRoutesById: FileRoutesById
@@ -242,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachProgramsRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/library': {
+      id: '/coach/library'
+      path: '/library'
+      fullPath: '/coach/library'
+      preLoaderRoute: typeof CoachLibraryRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/exercises': {
       id: '/coach/exercises'
       path: '/exercises'
@@ -270,12 +371,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachProgramsIndexRouteImport
       parentRoute: typeof CoachProgramsRoute
     }
+    '/coach/library/': {
+      id: '/coach/library/'
+      path: '/'
+      fullPath: '/coach/library/'
+      preLoaderRoute: typeof CoachLibraryIndexRouteImport
+      parentRoute: typeof CoachLibraryRoute
+    }
     '/coach/programs/$programId': {
       id: '/coach/programs/$programId'
       path: '/$programId'
       fullPath: '/coach/programs/$programId'
       preLoaderRoute: typeof CoachProgramsProgramIdRouteImport
       parentRoute: typeof CoachProgramsRoute
+    }
+    '/coach/library/workouts': {
+      id: '/coach/library/workouts'
+      path: '/workouts'
+      fullPath: '/coach/library/workouts'
+      preLoaderRoute: typeof CoachLibraryWorkoutsRouteImport
+      parentRoute: typeof CoachLibraryRoute
+    }
+    '/coach/library/exercises': {
+      id: '/coach/library/exercises'
+      path: '/exercises'
+      fullPath: '/coach/library/exercises'
+      preLoaderRoute: typeof CoachLibraryExercisesRouteImport
+      parentRoute: typeof CoachLibraryRoute
     }
     '/coach/clients/$clientId': {
       id: '/coach/clients/$clientId'
@@ -291,12 +413,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachProgramsProgramIdIndexRouteImport
       parentRoute: typeof CoachProgramsProgramIdRoute
     }
+    '/coach/library/workouts/': {
+      id: '/coach/library/workouts/'
+      path: '/'
+      fullPath: '/coach/library/workouts/'
+      preLoaderRoute: typeof CoachLibraryWorkoutsIndexRouteImport
+      parentRoute: typeof CoachLibraryWorkoutsRoute
+    }
+    '/coach/library/workouts/$workoutId': {
+      id: '/coach/library/workouts/$workoutId'
+      path: '/$workoutId'
+      fullPath: '/coach/library/workouts/$workoutId'
+      preLoaderRoute: typeof CoachLibraryWorkoutsWorkoutIdRouteImport
+      parentRoute: typeof CoachLibraryWorkoutsRoute
+    }
+    '/coach/library/workouts/$workoutId/': {
+      id: '/coach/library/workouts/$workoutId/'
+      path: '/'
+      fullPath: '/coach/library/workouts/$workoutId/'
+      preLoaderRoute: typeof CoachLibraryWorkoutsWorkoutIdIndexRouteImport
+      parentRoute: typeof CoachLibraryWorkoutsWorkoutIdRoute
+    }
     '/coach/programs/$programId/workouts/$workoutId': {
       id: '/coach/programs/$programId/workouts/$workoutId'
       path: '/workouts/$workoutId'
       fullPath: '/coach/programs/$programId/workouts/$workoutId'
       preLoaderRoute: typeof CoachProgramsProgramIdWorkoutsWorkoutIdRouteImport
       parentRoute: typeof CoachProgramsProgramIdRoute
+    }
+    '/coach/library/workouts/$workoutId/preview': {
+      id: '/coach/library/workouts/$workoutId/preview'
+      path: '/preview'
+      fullPath: '/coach/library/workouts/$workoutId/preview'
+      preLoaderRoute: typeof CoachLibraryWorkoutsWorkoutIdPreviewRouteImport
+      parentRoute: typeof CoachLibraryWorkoutsWorkoutIdRoute
     }
     '/client/programs/$programId/workouts/$workoutId': {
       id: '/client/programs/$programId/workouts/$workoutId'
@@ -335,6 +485,54 @@ const ClientRouteChildren: ClientRouteChildren = {
 
 const ClientRouteWithChildren =
   ClientRoute._addFileChildren(ClientRouteChildren)
+
+interface CoachLibraryWorkoutsWorkoutIdRouteChildren {
+  CoachLibraryWorkoutsWorkoutIdPreviewRoute: typeof CoachLibraryWorkoutsWorkoutIdPreviewRoute
+  CoachLibraryWorkoutsWorkoutIdIndexRoute: typeof CoachLibraryWorkoutsWorkoutIdIndexRoute
+}
+
+const CoachLibraryWorkoutsWorkoutIdRouteChildren: CoachLibraryWorkoutsWorkoutIdRouteChildren =
+  {
+    CoachLibraryWorkoutsWorkoutIdPreviewRoute:
+      CoachLibraryWorkoutsWorkoutIdPreviewRoute,
+    CoachLibraryWorkoutsWorkoutIdIndexRoute:
+      CoachLibraryWorkoutsWorkoutIdIndexRoute,
+  }
+
+const CoachLibraryWorkoutsWorkoutIdRouteWithChildren =
+  CoachLibraryWorkoutsWorkoutIdRoute._addFileChildren(
+    CoachLibraryWorkoutsWorkoutIdRouteChildren,
+  )
+
+interface CoachLibraryWorkoutsRouteChildren {
+  CoachLibraryWorkoutsWorkoutIdRoute: typeof CoachLibraryWorkoutsWorkoutIdRouteWithChildren
+  CoachLibraryWorkoutsIndexRoute: typeof CoachLibraryWorkoutsIndexRoute
+}
+
+const CoachLibraryWorkoutsRouteChildren: CoachLibraryWorkoutsRouteChildren = {
+  CoachLibraryWorkoutsWorkoutIdRoute:
+    CoachLibraryWorkoutsWorkoutIdRouteWithChildren,
+  CoachLibraryWorkoutsIndexRoute: CoachLibraryWorkoutsIndexRoute,
+}
+
+const CoachLibraryWorkoutsRouteWithChildren =
+  CoachLibraryWorkoutsRoute._addFileChildren(CoachLibraryWorkoutsRouteChildren)
+
+interface CoachLibraryRouteChildren {
+  CoachLibraryExercisesRoute: typeof CoachLibraryExercisesRoute
+  CoachLibraryWorkoutsRoute: typeof CoachLibraryWorkoutsRouteWithChildren
+  CoachLibraryIndexRoute: typeof CoachLibraryIndexRoute
+}
+
+const CoachLibraryRouteChildren: CoachLibraryRouteChildren = {
+  CoachLibraryExercisesRoute: CoachLibraryExercisesRoute,
+  CoachLibraryWorkoutsRoute: CoachLibraryWorkoutsRouteWithChildren,
+  CoachLibraryIndexRoute: CoachLibraryIndexRoute,
+}
+
+const CoachLibraryRouteWithChildren = CoachLibraryRoute._addFileChildren(
+  CoachLibraryRouteChildren,
+)
 
 interface CoachProgramsProgramIdWorkoutsWorkoutIdRouteChildren {
   CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute: typeof CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute
@@ -388,6 +586,7 @@ const CoachProgramsRouteWithChildren = CoachProgramsRoute._addFileChildren(
 interface CoachRouteChildren {
   CoachDashboardRoute: typeof CoachDashboardRoute
   CoachExercisesRoute: typeof CoachExercisesRoute
+  CoachLibraryRoute: typeof CoachLibraryRouteWithChildren
   CoachProgramsRoute: typeof CoachProgramsRouteWithChildren
   CoachClientsClientIdRoute: typeof CoachClientsClientIdRoute
 }
@@ -395,6 +594,7 @@ interface CoachRouteChildren {
 const CoachRouteChildren: CoachRouteChildren = {
   CoachDashboardRoute: CoachDashboardRoute,
   CoachExercisesRoute: CoachExercisesRoute,
+  CoachLibraryRoute: CoachLibraryRouteWithChildren,
   CoachProgramsRoute: CoachProgramsRouteWithChildren,
   CoachClientsClientIdRoute: CoachClientsClientIdRoute,
 }
@@ -409,13 +609,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

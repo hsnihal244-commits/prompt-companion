@@ -1,11 +1,11 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, ListChecks, Dumbbell } from "lucide-react";
+import { LayoutDashboard, Library, ListChecks } from "lucide-react";
 import { useEffect, type ComponentType } from "react";
 import { useAccount } from "@/components/account/AccountProvider";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
-  to: "/coach/dashboard" | "/coach/programs" | "/coach/exercises";
+  to: "/coach/dashboard" | "/coach/programs" | "/coach/library";
   label: string;
   icon: ComponentType<{ className?: string }>;
 };
@@ -13,7 +13,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { to: "/coach/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/coach/programs", label: "Program Manager", icon: ListChecks },
-  { to: "/coach/exercises", label: "Exercise Library", icon: Dumbbell },
+  { to: "/coach/library", label: "Library", icon: Library },
 ];
 
 export function CoachShell() {
@@ -30,6 +30,7 @@ export function CoachShell() {
     pathname === "/coach/dashboard" || pathname.startsWith("/coach/clients/");
   const isProgramsActive =
     pathname === "/coach/programs" || pathname.startsWith("/coach/programs/");
+  const isLibraryActive = pathname === "/coach/library" || pathname.startsWith("/coach/library/");
 
   if (loading || account?.role !== "coach") {
     return <div className="min-h-[100dvh] bg-background" />;
@@ -67,7 +68,9 @@ export function CoachShell() {
                 ? isProgramsActive
                 : item.to === "/coach/dashboard"
                   ? isDashboardActive
-                  : pathname === item.to;
+                  : item.to === "/coach/library"
+                    ? isLibraryActive
+                    : pathname === item.to;
             const Icon = item.icon;
             return (
               <li key={item.to} className="flex-1">
