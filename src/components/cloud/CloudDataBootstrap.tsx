@@ -88,7 +88,7 @@ export function CloudDataBootstrap({ children }: { children: ReactNode }) {
         }
         const { error } = await supabase
           .from("app_state")
-          .update({ [field]: value })
+          .update({ [field]: value } as never)
           .eq("id", "global");
         if (error) console.error(`Failed to sync ${field} to Cloud`, error);
       }, 300);
