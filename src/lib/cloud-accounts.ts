@@ -61,7 +61,7 @@ export async function createAccount(input: {
 
   const { data, error } = await supabase
     .from("app_accounts")
-    .insert({ name, username, role: input.role })
+    .insert({ name, username, role: input.role } as never)
     .select("id, name, username, role, assigned_program_id, created_at")
     .single();
 
