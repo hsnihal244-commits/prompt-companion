@@ -28,7 +28,7 @@ import {
   loadPrograms,
   savePrograms,
 } from "@/lib/coach-programs";
-import { type ProgramWorkout, loadWorkouts, workoutsForProgram } from "@/lib/coach-workouts";
+import { type ProgramWorkout, loadWorkouts, sortWorkouts } from "@/lib/coach-workouts";
 import { ProgramWorkoutsSection } from "./ProgramWorkoutsSection";
 
 const WEEKDAYS: Weekday[] = [
@@ -47,9 +47,14 @@ export function ProgramDetail({ programId }: { programId: string }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setPrograms(loadPrograms());
-    setWorkouts(loadWorkouts());
+    const reload = () => {
+      setPrograms(loadPrograms());
+      setWorkouts(loadWorkouts());
+    };
+    reload();
     setHydrated(true);
+    window.addEventListener("no-more-copium:workout-library-updated", reload);
+    return () => window.removeEventListener("no-more-copium:workout-library-updated", reload);
   }, []);
 
   useEffect(() => {
@@ -86,7 +91,7 @@ export function ProgramDetail({ programId }: { programId: string }) {
     updateProgram({ dayAssignments: nextAssignments });
   };
 
-  const programWorkouts = workoutsForProgram(workouts, programId);
+  const programWorkouts = sortWorkouts(workouts);
 
   return (
     <div className="space-y-6">

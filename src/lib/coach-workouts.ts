@@ -25,7 +25,6 @@ export type WorkoutExercisePrescription = {
 
 export type ProgramWorkout = {
   id: string;
-  programId: string;
   name: string;
   exercises: WorkoutExercisePrescription[];
   createdAt: string;
@@ -151,8 +150,6 @@ function normalizeWorkout(value: unknown): ProgramWorkout | null {
   if (
     typeof raw.id !== "string" ||
     raw.id.length === 0 ||
-    typeof raw.programId !== "string" ||
-    raw.programId.length === 0 ||
     typeof raw.name !== "string" ||
     raw.name.length === 0 ||
     typeof raw.createdAt !== "string" ||
@@ -167,7 +164,6 @@ function normalizeWorkout(value: unknown): ProgramWorkout | null {
     : [];
   return {
     id: raw.id,
-    programId: raw.programId,
     name: raw.name,
     exercises,
     createdAt: raw.createdAt,
@@ -182,9 +178,10 @@ export function loadWorkouts(): ProgramWorkout[] {
     if (!stored) return [];
     const parsed: unknown = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [];
-    return parsed
+    const normalized = parsed
       .map(normalizeWorkout)
       .filter((workout): workout is ProgramWorkout => workout !== null);
+    return makeWorkoutNamesUnique(normalized);
   } catch {
     return [];
   }
@@ -244,11 +241,10 @@ export function createExerciseInstance(exerciseId: string): WorkoutExercisePresc
   };
 }
 
-export function createWorkout(input: { programId: string; name: string }): ProgramWorkout {
+export function createWorkout(input: { name: string }): ProgramWorkout {
   const now = new Date().toISOString();
   return {
     id: createWorkoutId(),
-    programId: input.programId,
     name: input.name.trim(),
     exercises: [],
     createdAt: now,
@@ -256,13 +252,35 @@ export function createWorkout(input: { programId: string; name: string }): Progr
   };
 }
 
-export function workoutsForProgram(
+export function sortWorkouts(workouts: ProgramWorkout[]): ProgramWorkout[] {
+  return [...workouts].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export function isWorkoutNameAvailable(
   workouts: ProgramWorkout[],
-  programId: string,
-): ProgramWorkout[] {
-  return workouts
-    .filter((workout) => workout.programId === programId)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  name: string,
+  excludedWorkoutId?: string,
+): boolean {
+  const normalized = name.trim().toLocaleLowerCase();
+  return !workouts.some(
+    (workout) =>
+      workout.id !== excludedWorkoutId && workout.name.trim().toLocaleLowerCase() === normalized,
+  );
+}
+
+function makeWorkoutNamesUnique(workouts: ProgramWorkout[]): ProgramWorkout[] {
+  const used = new Set<string>();
+  return workouts.map((workout) => {
+    const baseName = workout.name.trim() || "Untitled Workout";
+    let candidate = baseName;
+    let suffix = 2;
+    while (used.has(candidate.toLocaleLowerCase())) {
+      candidate = `${baseName} (${suffix})`;
+      suffix += 1;
+    }
+    used.add(candidate.toLocaleLowerCase());
+    return candidate === workout.name ? workout : { ...workout, name: candidate };
+  });
 }
 
 export function touchWorkout(workout: ProgramWorkout): ProgramWorkout {

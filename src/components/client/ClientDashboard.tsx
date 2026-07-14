@@ -9,7 +9,7 @@ import {
   loadPrograms,
   weekdayFromDate,
 } from "@/lib/coach-programs";
-import { type ProgramWorkout, loadWorkouts, workoutsForProgram } from "@/lib/coach-workouts";
+import { type ProgramWorkout, loadWorkouts } from "@/lib/coach-workouts";
 import { getClientGreeting } from "@/lib/client-greeting";
 
 export function ClientDashboard() {
@@ -46,9 +46,7 @@ export function ClientDashboard() {
   const assignment: DayAssignment | undefined = assignedProgram?.dayAssignments[weekday];
   const todayWorkout = useMemo(() => {
     if (!assignedProgram || assignment?.type !== "workout") return undefined;
-    return workoutsForProgram(workouts, assignedProgram.id).find(
-      (workout) => workout.id === assignment.workoutId,
-    );
+    return workouts.find((workout) => workout.id === assignment.workoutId);
   }, [assignedProgram, assignment, workouts]);
 
   if (!hydrated || !client || client.role !== "client") return null;

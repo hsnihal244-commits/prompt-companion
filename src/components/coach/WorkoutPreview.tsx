@@ -99,7 +99,7 @@ export function WorkoutPreview({
   workoutId,
   audience = "coach",
 }: {
-  programId: string;
+  programId?: string;
   workoutId: string;
   audience?: "coach" | "client";
 }) {
@@ -111,7 +111,7 @@ export function WorkoutPreview({
 
   useEffect(() => {
     const all = loadWorkouts();
-    const found = all.find((w) => w.id === workoutId && w.programId === programId) ?? null;
+    const found = all.find((candidate) => candidate.id === workoutId) ?? null;
     setWorkout(found);
     setExercises(loadExercises());
     setWeightUnits(getAllWeightUnits(loadCustomWeightUnits()));
@@ -123,9 +123,16 @@ export function WorkoutPreview({
       void navigate({ to: "/client/dashboard" });
       return;
     }
+    if (programId) {
+      void navigate({
+        to: "/coach/programs/$programId/workouts/$workoutId",
+        params: { programId, workoutId },
+      });
+      return;
+    }
     void navigate({
-      to: "/coach/programs/$programId/workouts/$workoutId",
-      params: { programId, workoutId },
+      to: "/coach/library/workouts/$workoutId",
+      params: { workoutId },
     });
   }, [audience, navigate, programId, workoutId]);
 
@@ -147,7 +154,11 @@ export function WorkoutPreview({
           </p>
           <Button onClick={goBack} variant="outline">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            {audience === "client" ? "Back to dashboard" : "Back to builder"}
+            {audience === "client"
+              ? "Back to dashboard"
+              : programId
+                ? "Back to builder"
+                : "Back to Workout Library"}
           </Button>
         </div>
       </FullscreenSurface>
