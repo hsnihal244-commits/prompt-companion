@@ -65,8 +65,9 @@ export function ClientManagement({ clientId }: { clientId: string }) {
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Client</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-          {client.username}
+          {client.name}
         </h1>
+        <p className="mt-1 text-sm text-muted-foreground">@{client.username}</p>
       </div>
 
       <section aria-labelledby="program-assignment-heading" className="space-y-3">

@@ -94,7 +94,15 @@ function resultsReducer(state: SessionResultsMap, action: Action): SessionResult
   }
 }
 
-export function WorkoutPreview({ programId, workoutId }: { programId: string; workoutId: string }) {
+export function WorkoutPreview({
+  programId,
+  workoutId,
+  audience = "coach",
+}: {
+  programId: string;
+  workoutId: string;
+  audience?: "coach" | "client";
+}) {
   const navigate = useNavigate();
   const [workout, setWorkout] = useState<ProgramWorkout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -111,11 +119,15 @@ export function WorkoutPreview({ programId, workoutId }: { programId: string; wo
   }, [programId, workoutId]);
 
   const goBack = useCallback(() => {
+    if (audience === "client") {
+      void navigate({ to: "/client/dashboard" });
+      return;
+    }
     void navigate({
       to: "/coach/programs/$programId/workouts/$workoutId",
       params: { programId, workoutId },
     });
-  }, [navigate, programId, workoutId]);
+  }, [audience, navigate, programId, workoutId]);
 
   if (!hydrated) {
     return <FullscreenSurface>{null}</FullscreenSurface>;
@@ -125,7 +137,9 @@ export function WorkoutPreview({ programId, workoutId }: { programId: string; wo
     return (
       <FullscreenSurface>
         <div className="mx-auto flex min-h-full max-w-md flex-col items-start justify-center gap-4 p-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Nothing to preview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {audience === "client" ? "Workout unavailable" : "Nothing to preview"}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {workout
               ? "This workout has no prescribed sets yet."
@@ -133,7 +147,7 @@ export function WorkoutPreview({ programId, workoutId }: { programId: string; wo
           </p>
           <Button onClick={goBack} variant="outline">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back to builder
+            {audience === "client" ? "Back to dashboard" : "Back to builder"}
           </Button>
         </div>
       </FullscreenSurface>
@@ -145,6 +159,7 @@ export function WorkoutPreview({ programId, workoutId }: { programId: string; wo
       workout={workout}
       exercises={exercises}
       weightUnits={weightUnits}
+      audience={audience}
       onExit={goBack}
     />
   );
@@ -154,11 +169,13 @@ function PreviewSession({
   workout,
   exercises,
   weightUnits,
+  audience,
   onExit,
 }: {
   workout: ProgramWorkout;
   exercises: Exercise[];
   weightUnits: WeightUnit[];
+  audience: "coach" | "client";
   onExit: () => void;
 }) {
   const initialResults = useMemo(() => initSessionResults(workout), [workout]);
@@ -234,6 +251,7 @@ function PreviewSession({
       {mode === "chooser" && (
         <ModeChooser
           workoutName={workout.name}
+          audience={audience}
           onPickClassic={() => startMode("classic")}
           onPickGuided={() => startMode("guided")}
           onBack={requestExit}
@@ -274,6 +292,7 @@ function PreviewSession({
         <SummaryScreen
           workout={workout}
           weightUnits={weightUnits}
+          audience={audience}
           results={results}
           elapsed={elapsed}
           onAgain={restart}
@@ -284,12 +303,16 @@ function PreviewSession({
       <Dialog open={exitOpen} onOpenChange={setExitOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Exit preview?</DialogTitle>
-            <DialogDescription>Preview results will be discarded.</DialogDescription>
+            <DialogTitle>{audience === "client" ? "Exit workout?" : "Exit preview?"}</DialogTitle>
+            <DialogDescription>
+              {audience === "client"
+                ? "Workout results will be discarded."
+                : "Preview results will be discarded."}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExitOpen(false)}>
-              Continue preview
+              {audience === "client" ? "Continue workout" : "Continue preview"}
             </Button>
             <Button
               variant="destructive"
@@ -325,11 +348,13 @@ function FullscreenSurface({ children }: { children: React.ReactNode }) {
 
 function ModeChooser({
   workoutName,
+  audience,
   onPickClassic,
   onPickGuided,
   onBack,
 }: {
   workoutName: string;
+  audience: "coach" | "client";
   onPickClassic: () => void;
   onPickGuided: () => void;
   onBack: () => void;
@@ -338,10 +363,14 @@ function ModeChooser({
     <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-between gap-8 p-6">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Previewing
+          {audience === "client" ? "Today’s workout" : "Previewing"}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{workoutName}</h1>
-        <p className="mt-6 text-sm text-foreground">How do you want to preview this workout?</p>
+        <p className="mt-6 text-sm text-foreground">
+          {audience === "client"
+            ? "How do you want to train?"
+            : "How do you want to preview this workout?"}
+        </p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -380,7 +409,7 @@ function ModeChooser({
 
         <Button variant="ghost" onClick={onBack} className="mt-2 self-start">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to builder
+          {audience === "client" ? "Back to dashboard" : "Back to builder"}
         </Button>
       </div>
     </div>
@@ -1012,6 +1041,7 @@ function RestPanel({
 function SummaryScreen({
   workout,
   weightUnits,
+  audience,
   results,
   elapsed,
   onAgain,
@@ -1019,6 +1049,7 @@ function SummaryScreen({
 }: {
   workout: ProgramWorkout;
   weightUnits: WeightUnit[];
+  audience: "coach" | "client";
   results: SessionResultsMap;
   elapsed: number;
   onAgain: () => void;
@@ -1047,7 +1078,7 @@ function SummaryScreen({
     <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-between gap-6 p-6">
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Preview complete
+          {audience === "client" ? "Workout complete" : "Preview complete"}
         </p>
         <h1 className="text-2xl font-semibold tracking-tight">{workout.name}</h1>
       </div>
@@ -1068,11 +1099,11 @@ function SummaryScreen({
       <div className="flex flex-col gap-2">
         <Button onClick={onAgain} variant="outline">
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
-          Preview again
+          {audience === "client" ? "Start again" : "Preview again"}
         </Button>
         <Button onClick={onBack}>
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to builder
+          {audience === "client" ? "Back to dashboard" : "Back to builder"}
         </Button>
       </div>
     </div>

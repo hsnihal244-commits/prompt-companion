@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Dumbbell, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,10 +23,12 @@ import {
   type Weekday,
   getOrderedWeekdays,
   getWeekdayLabel,
+  getWorkoutAssignment,
   isRestDay,
   loadPrograms,
   savePrograms,
 } from "@/lib/coach-programs";
+import { type ProgramWorkout, loadWorkouts, workoutsForProgram } from "@/lib/coach-workouts";
 import { ProgramWorkoutsSection } from "./ProgramWorkoutsSection";
 
 const WEEKDAYS: Weekday[] = [
@@ -41,10 +43,12 @@ const WEEKDAYS: Weekday[] = [
 
 export function ProgramDetail({ programId }: { programId: string }) {
   const [programs, setPrograms] = useState<ProgramSummary[]>([]);
+  const [workouts, setWorkouts] = useState<ProgramWorkout[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setPrograms(loadPrograms());
+    setWorkouts(loadWorkouts());
     setHydrated(true);
   }, []);
 
@@ -82,13 +86,20 @@ export function ProgramDetail({ programId }: { programId: string }) {
     updateProgram({ dayAssignments: nextAssignments });
   };
 
+  const programWorkouts = workoutsForProgram(workouts, programId);
+
   return (
     <div className="space-y-6">
       <BackLink />
       <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
       <div className="max-w-md space-y-4">
         <FirstDaySelector value={program.firstDayOfWeek} onChange={setFirstDayOfWeek} />
-        <DayRow program={program} onAssign={assignDay} onClear={clearDay} />
+        <DayRow
+          program={program}
+          workouts={programWorkouts}
+          onAssign={assignDay}
+          onClear={clearDay}
+        />
       </div>
       <ProgramWorkoutsSection programId={programId} />
     </div>
@@ -155,10 +166,12 @@ function FirstDaySelector({
 
 function DayRow({
   program,
+  workouts,
   onAssign,
   onClear,
 }: {
   program: ProgramSummary;
+  workouts: ProgramWorkout[];
   onAssign: (weekday: Weekday, assignment: DayAssignment) => void;
   onClear: (weekday: Weekday) => void;
 }) {
@@ -170,7 +183,9 @@ function DayRow({
         <DayItem
           key={weekday}
           weekday={weekday}
-          assigned={isRestDay(program.dayAssignments, weekday)}
+          restAssigned={isRestDay(program.dayAssignments, weekday)}
+          workoutId={getWorkoutAssignment(program.dayAssignments, weekday)}
+          workouts={workouts}
           onAssign={onAssign}
           onClear={onClear}
         />
@@ -181,36 +196,28 @@ function DayRow({
 
 function DayItem({
   weekday,
-  assigned,
+  restAssigned,
+  workoutId,
+  workouts,
   onAssign,
   onClear,
 }: {
   weekday: Weekday;
-  assigned: boolean;
+  restAssigned: boolean;
+  workoutId: string | undefined;
+  workouts: ProgramWorkout[];
   onAssign: (weekday: Weekday, assignment: DayAssignment) => void;
   onClear: (weekday: Weekday) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [comingSoon, setComingSoon] = useState(false);
+  const [choosingWorkout, setChoosingWorkout] = useState(false);
   const label = getWeekdayLabel(weekday);
+  const assignedWorkout = workouts.find((workout) => workout.id === workoutId);
+  const assigned = restAssigned || workoutId !== undefined;
 
-  const handleRest = () => {
-    onAssign(weekday, { type: "rest" });
+  const close = () => {
     setDialogOpen(false);
-  };
-
-  const handleClear = () => {
-    onClear(weekday);
-    setDialogOpen(false);
-  };
-
-  const handleChooseWorkout = () => {
-    setComingSoon(true);
-  };
-
-  const handleClose = () => {
-    setDialogOpen(false);
-    setComingSoon(false);
+    setChoosingWorkout(false);
   };
 
   return (
@@ -219,60 +226,109 @@ function DayItem({
         type="button"
         onClick={() => setDialogOpen(true)}
         aria-label={
-          assigned ? `${label.full}, rest day. Change assignment` : `Assign ${label.full}`
+          restAssigned
+            ? `${label.full}, rest day. Change assignment`
+            : assignedWorkout
+              ? `${label.full}, ${assignedWorkout.name}. Change assignment`
+              : `Assign ${label.full}`
         }
         className={
-          "flex h-24 flex-col items-center justify-between rounded-lg border px-1 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] " +
+          "flex h-24 min-w-0 flex-col items-center justify-between overflow-hidden rounded-lg border px-1 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] " +
           (assigned
             ? "border-primary/50 bg-primary/10 text-foreground"
             : "border-border bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground")
         }
       >
         <span className="text-xs font-medium">{label.short}</span>
-        {assigned ? (
+        {restAssigned ? (
           <span className="text-xs font-medium">Rest</span>
+        ) : assignedWorkout ? (
+          <span className="flex min-w-0 flex-col items-center gap-1">
+            <Dumbbell className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="max-w-full truncate text-[9px] leading-tight">
+              {assignedWorkout.name}
+            </span>
+          </span>
+        ) : workoutId ? (
+          <span className="text-[9px] leading-tight text-destructive">Unavailable</span>
         ) : (
           <Plus className="h-5 w-5" aria-hidden="true" />
         )}
       </button>
 
-      <Dialog open={dialogOpen} onOpenChange={handleClose}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) close();
+          else setDialogOpen(true);
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
-          {comingSoon ? (
+          {choosingWorkout ? (
             <>
               <DialogHeader>
-                <DialogTitle>Workout selection coming soon</DialogTitle>
-                <DialogDescription>
-                  Workouts will be available to assign in a future update.
-                </DialogDescription>
+                <DialogTitle>Select workout for {label.full}</DialogTitle>
+                <DialogDescription>Choose a workout from this training program.</DialogDescription>
               </DialogHeader>
+              {workouts.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+                  Create a workout in this program first.
+                </p>
+              ) : (
+                <div className="max-h-72 space-y-1 overflow-y-auto">
+                  {workouts.map((workout) => (
+                    <button
+                      key={workout.id}
+                      type="button"
+                      onClick={() => {
+                        onAssign(weekday, { type: "workout", workoutId: workout.id });
+                        close();
+                      }}
+                      className="w-full truncate rounded-md border border-border px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {workout.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               <DialogFooter>
-                <Button onClick={handleClose}>Got it</Button>
+                <Button variant="outline" onClick={() => setChoosingWorkout(false)}>
+                  Back
+                </Button>
               </DialogFooter>
             </>
           ) : (
             <>
               <DialogHeader>
                 <DialogTitle>{label.full}</DialogTitle>
-                <DialogDescription>
-                  {assigned
-                    ? "This day is currently a rest day. Choose what to assign."
-                    : "Choose what to assign to this day."}
-                </DialogDescription>
+                <DialogDescription>Choose what to assign to this day.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-3">
-                <Button variant="outline" onClick={handleChooseWorkout}>
+                <Button variant="outline" onClick={() => setChoosingWorkout(true)}>
                   Choose workout
                 </Button>
-                <Button onClick={handleRest}>Rest day</Button>
+                <Button
+                  onClick={() => {
+                    onAssign(weekday, { type: "rest" });
+                    close();
+                  }}
+                >
+                  Rest day
+                </Button>
               </div>
               <DialogFooter>
                 {assigned && (
-                  <Button variant="ghost" onClick={handleClear}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      onClear(weekday);
+                      close();
+                    }}
+                  >
                     Clear assignment
                   </Button>
                 )}
-                <Button variant="secondary" onClick={handleClose}>
+                <Button variant="secondary" onClick={close}>
                   Cancel
                 </Button>
               </DialogFooter>
