@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_accounts: {
+        Row: {
+          assigned_program_id: string | null
+          created_at: string
+          id: string
+          name: string
+          role: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          assigned_program_id?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          role: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          assigned_program_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          role?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      app_state: {
+        Row: {
+          exercises: Json
+          id: string
+          programs: Json
+          updated_at: string
+          weight_units: Json
+          workouts: Json
+        }
+        Insert: {
+          exercises?: Json
+          id?: string
+          programs?: Json
+          updated_at?: string
+          weight_units?: Json
+          workouts?: Json
+        }
+        Update: {
+          exercises?: Json
+          id?: string
+          programs?: Json
+          updated_at?: string
+          weight_units?: Json
+          workouts?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
