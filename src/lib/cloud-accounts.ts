@@ -83,7 +83,7 @@ export async function updateCloudClientAssignment(
 ): Promise<AppAccount> {
   const { data, error } = await supabase
     .from("app_accounts")
-    .update({ assigned_program_id: assignedProgramId ?? null })
+    .update({ assigned_program_id: assignedProgramId ?? null } as never)
     .eq("id", clientId)
     .eq("role", "client")
     .select("id, name, username, role, assigned_program_id, created_at")
