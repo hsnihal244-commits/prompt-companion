@@ -1,15 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ensureMikeClient } from "@/lib/coach-clients";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,7 +23,6 @@ export const Route = createFileRoute("/")({
 
 function EntryPage() {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
 
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-background px-6 py-12">
@@ -48,7 +38,7 @@ function EntryPage() {
             variant="default"
             onClick={() => {
               ensureMikeClient();
-              setOpen(true);
+              void navigate({ to: "/client/dashboard" });
             }}
             className="w-full"
           >
@@ -64,21 +54,6 @@ function EntryPage() {
           </Button>
         </div>
       </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Client Mode</DialogTitle>
-            <DialogDescription>
-              The local placeholder client account Mike is ready. The full client experience will be
-              added in the next phase.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setOpen(false)}>Got it</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }

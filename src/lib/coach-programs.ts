@@ -1,9 +1,7 @@
 export type Weekday =
   "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
 
-export type DayAssignment = {
-  type: "rest";
-};
+export type DayAssignment = { type: "rest" } | { type: "workout"; workoutId: string };
 
 export type ProgramSummary = {
   id: string;
@@ -54,14 +52,26 @@ export function isRestDay(
   assignments: Partial<Record<Weekday, DayAssignment>>,
   weekday: Weekday,
 ): boolean {
+  return assignments[weekday]?.type === "rest";
+}
+
+export function getWorkoutAssignment(
+  assignments: Partial<Record<Weekday, DayAssignment>>,
+  weekday: Weekday,
+): string | undefined {
   const assignment = assignments[weekday];
-  return assignment?.type === "rest";
+  return assignment?.type === "workout" ? assignment.workoutId : undefined;
+}
+
+export function weekdayFromDate(date: Date): Weekday {
+  return WEEKDAYS[date.getDay()] ?? "sunday";
 }
 
 function isValidDayAssignment(value: unknown): value is DayAssignment {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  return v.type === "rest";
+  if (v.type === "rest") return true;
+  return v.type === "workout" && typeof v.workoutId === "string" && v.workoutId.length > 0;
 }
 
 function normalizeDayAssignments(value: unknown): Partial<Record<Weekday, DayAssignment>> {

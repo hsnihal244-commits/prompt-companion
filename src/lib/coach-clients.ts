@@ -1,5 +1,6 @@
 export type ClientAccount = {
   id: string;
+  name: string;
   username: string;
   createdAt: string;
   assignedProgramId?: string;
@@ -24,6 +25,8 @@ function normalizeClient(value: unknown): ClientAccount | null {
   }
   return {
     id: raw.id,
+    name:
+      typeof raw.name === "string" && raw.name.trim().length > 0 ? raw.name.trim() : raw.username,
     username: raw.username,
     createdAt: raw.createdAt,
     assignedProgramId:
@@ -62,6 +65,7 @@ export function ensureMikeClient(): ClientAccount {
 
   const mike: ClientAccount = {
     id: MIKE_CLIENT_ID,
+    name: MIKE_USERNAME,
     username: MIKE_USERNAME,
     createdAt: new Date().toISOString(),
   };
