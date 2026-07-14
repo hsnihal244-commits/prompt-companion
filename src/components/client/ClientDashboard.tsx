@@ -2,12 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  MIKE_CLIENT_ID,
-  type ClientAccount,
-  ensureMikeClient,
-  loadClients,
-} from "@/lib/coach-clients";
+import { useAccount } from "@/components/account/AccountProvider";
 import {
   type DayAssignment,
   type ProgramSummary,
@@ -18,23 +13,30 @@ import { type ProgramWorkout, loadWorkouts, workoutsForProgram } from "@/lib/coa
 import { getClientGreeting } from "@/lib/client-greeting";
 
 export function ClientDashboard() {
-  const [client, setClient] = useState<ClientAccount | null>(null);
+  const { account: client, refresh } = useAccount();
   const [programs, setPrograms] = useState<ProgramSummary[]>([]);
   const [workouts, setWorkouts] = useState<ProgramWorkout[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    ensureMikeClient();
-    setClient(loadClients().find((candidate) => candidate.id === MIKE_CLIENT_ID) ?? null);
-    setPrograms(loadPrograms());
-    setWorkouts(loadWorkouts());
+    const loadCachedCoachData = () => {
+      setPrograms(loadPrograms());
+      setWorkouts(loadWorkouts());
+    };
+
+    void refresh();
+    loadCachedCoachData();
     setNow(new Date());
     setHydrated(true);
 
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
+    window.addEventListener("no-more-copium:cloud-cache-refreshed", loadCachedCoachData);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("no-more-copium:cloud-cache-refreshed", loadCachedCoachData);
+    };
+  }, [refresh]);
 
   const assignedProgram = useMemo(
     () => programs.find((program) => program.id === client?.assignedProgramId),
@@ -49,7 +51,7 @@ export function ClientDashboard() {
     );
   }, [assignedProgram, assignment, workouts]);
 
-  if (!hydrated || !client) return null;
+  if (!hydrated || !client || client.role !== "client") return null;
 
   return (
     <section>

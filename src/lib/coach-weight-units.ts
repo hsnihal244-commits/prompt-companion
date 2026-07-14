@@ -1,3 +1,5 @@
+import { emitCloudDataChanged } from "./cloud-events";
+
 export type WeightUnit = {
   id: string;
   longForm: string;
@@ -66,6 +68,7 @@ export function saveCustomWeightUnits(units: WeightUnit[]): void {
       CUSTOM_WEIGHT_UNITS_STORAGE_KEY,
       JSON.stringify(units.filter((unit) => unit.isCustom)),
     );
+    emitCloudDataChanged("weight_units");
   } catch {
     // The in-memory editor remains usable when storage is unavailable.
   }

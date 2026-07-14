@@ -1,6 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { ensureMikeClient } from "@/lib/coach-clients";
+import { createFileRoute } from "@tanstack/react-router";
+import { AccountAccess } from "@/components/account/AccountAccess";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -9,49 +8,25 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "No More Copium is a workout programming app for coaches and clients. Choose how you want to continue.",
+          "No More Copium is a workout programming app for coaches and clients. Choose an account or create a new one.",
       },
       { property: "og:title", content: "No More Copium" },
-      {
-        property: "og:description",
-        content: "Workout programming for coaches and clients.",
-      },
+      { property: "og:description", content: "Workout programming for coaches and clients." },
     ],
   }),
   component: EntryPage,
 });
 
 function EntryPage() {
-  const navigate = useNavigate();
-
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-background px-6 py-12">
       <div className="w-full max-w-sm text-center">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           No More Copium
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">Choose how you want to continue.</p>
-
-        <div className="mt-8 flex flex-col gap-3">
-          <Button
-            size="lg"
-            variant="default"
-            onClick={() => {
-              ensureMikeClient();
-              void navigate({ to: "/client/dashboard" });
-            }}
-            className="w-full"
-          >
-            Client Mode
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={() => navigate({ to: "/coach/dashboard" })}
-            className="w-full"
-          >
-            Coach Mode
-          </Button>
+        <p className="mt-3 text-sm text-muted-foreground">Choose an account to continue.</p>
+        <div className="mt-8">
+          <AccountAccess />
         </div>
       </div>
     </main>

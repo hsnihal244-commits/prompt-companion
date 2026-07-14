@@ -8,38 +8,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  type ClientAccount,
-  loadClients,
-  saveClients,
-  updateClientAssignment,
-} from "@/lib/coach-clients";
+import { type AppAccount, fetchAccount, updateCloudClientAssignment } from "@/lib/cloud-accounts";
 import { type ProgramSummary, loadPrograms } from "@/lib/coach-programs";
 
 const NO_PROGRAM_VALUE = "__no_program__";
 
 export function ClientManagement({ clientId }: { clientId: string }) {
-  const [clients, setClients] = useState<ClientAccount[]>([]);
+  const [client, setClient] = useState<AppAccount | null>(null);
   const [programs, setPrograms] = useState<ProgramSummary[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setClients(loadClients());
-    setPrograms(loadPrograms());
-    setHydrated(true);
-  }, []);
+    Promise.all([fetchAccount(clientId), Promise.resolve(loadPrograms())])
+      .then(([nextClient, nextPrograms]) => {
+        setClient(nextClient?.role === "client" ? nextClient : null);
+        setPrograms(nextPrograms);
+      })
+      .catch((nextError: unknown) => {
+        console.error(nextError);
+        setError("Client data could not be loaded from Cloud.");
+      })
+      .finally(() => setLoading(false));
+  }, [clientId]);
 
-  useEffect(() => {
-    if (hydrated) saveClients(clients);
-  }, [clients, hydrated]);
-
-  const client = clients.find((candidate) => candidate.id === clientId);
   const assignedProgram = useMemo(
     () => programs.find((program) => program.id === client?.assignedProgramId),
     [client?.assignedProgramId, programs],
   );
 
-  if (!hydrated) return null;
+  if (loading) return null;
 
   if (!client) {
     return (
@@ -50,7 +49,7 @@ export function ClientManagement({ clientId }: { clientId: string }) {
             Client not found
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            This local client account is not available in this browser.
+            {error ?? "This client account is not available in Cloud."}
           </p>
         </div>
       </section>
@@ -58,6 +57,23 @@ export function ClientManagement({ clientId }: { clientId: string }) {
   }
 
   const selectedValue = assignedProgram?.id ?? NO_PROGRAM_VALUE;
+
+  const changeAssignment = async (value: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateCloudClientAssignment(
+        client.id,
+        value === NO_PROGRAM_VALUE ? undefined : value,
+      );
+      setClient(updated);
+    } catch (nextError) {
+      console.error(nextError);
+      setError("The program assignment could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -97,15 +113,8 @@ export function ClientManagement({ clientId }: { clientId: string }) {
             </label>
             <Select
               value={selectedValue}
-              onValueChange={(value) =>
-                setClients((previous) =>
-                  updateClientAssignment(
-                    previous,
-                    client.id,
-                    value === NO_PROGRAM_VALUE ? undefined : value,
-                  ),
-                )
-              }
+              disabled={saving}
+              onValueChange={(value) => void changeAssignment(value)}
             >
               <SelectTrigger id="client-program" className="h-10" aria-label="Training program">
                 <SelectValue />
@@ -119,7 +128,10 @@ export function ClientManagement({ clientId }: { clientId: string }) {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Changes save automatically.</p>
+            <p className="text-xs text-muted-foreground">
+              {saving ? "Saving…" : "Changes save automatically."}
+            </p>
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         )}
       </section>

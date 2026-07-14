@@ -1,3 +1,5 @@
+import { emitCloudDataChanged } from "./cloud-events";
+
 export type Exercise = {
   id: string;
   name: string;
@@ -78,6 +80,7 @@ export function saveExercises(exercises: Exercise[]): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(EXERCISES_STORAGE_KEY, JSON.stringify(exercises));
+    emitCloudDataChanged("exercises");
   } catch {
     // ignore
   }
