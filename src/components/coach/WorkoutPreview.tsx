@@ -12,6 +12,7 @@ import {
   SkipForward,
   X,
 } from "lucide-react";
+import { SettingsMenu } from "@/components/account/SettingsMenu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -455,6 +456,7 @@ function PreviewHeader({
             {formatElapsed(elapsed)}
           </span>
           {right}
+          <SettingsMenu />
           <Button variant="ghost" size="icon" onClick={onExit} aria-label="Exit preview">
             <X className="h-4 w-4" aria-hidden="true" />
           </Button>
