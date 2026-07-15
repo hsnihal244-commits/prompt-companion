@@ -24,10 +24,12 @@ export function useLongPressReorder({ itemIds, onReorder }: ReorderOptions) {
   const overIdRef = useRef<string | null>(null);
   const pointerIdRef = useRef<number | null>(null);
   const startYRef = useRef(0);
+  const offsetYRef = useRef(0);
+  const pendingClientYRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [offsetY, setOffsetY] = useState(0);
   const [announcement, setAnnouncement] = useState("");
 
   itemIdsRef.current = itemIds;
@@ -41,17 +43,28 @@ export function useLongPressReorder({ itemIds, onReorder }: ReorderOptions) {
 
   const clearDrag = () => {
     cancelTimer();
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    const activeElement = activeIdRef.current
+      ? itemElementsRef.current.get(activeIdRef.current)
+      : undefined;
+    if (activeElement) activeElement.style.transform = "";
     activeIdRef.current = null;
     overIdRef.current = null;
     pointerIdRef.current = null;
+    offsetYRef.current = 0;
     setActiveId(null);
     setOverId(null);
-    setOffsetY(0);
   };
 
   useEffect(
     () => () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
     },
     [],
   );
@@ -59,6 +72,7 @@ export function useLongPressReorder({ itemIds, onReorder }: ReorderOptions) {
   const activate = (id: string) => {
     activeIdRef.current = id;
     overIdRef.current = id;
+    offsetYRef.current = 0;
     setActiveId(id);
     setOverId(id);
     const index = itemIdsRef.current.indexOf(id);
@@ -115,8 +129,20 @@ export function useLongPressReorder({ itemIds, onReorder }: ReorderOptions) {
         return;
       }
       event.preventDefault();
-      setOffsetY(event.clientY - startYRef.current);
-      const nearest = nearestItem(event.clientY);
+      pendingClientYRef.current = event.clientY;
+      offsetYRef.current = event.clientY - startYRef.current;
+      if (animationFrameRef.current === null) {
+        animationFrameRef.current = window.requestAnimationFrame(() => {
+          animationFrameRef.current = null;
+          const activeElement = activeIdRef.current
+            ? itemElementsRef.current.get(activeIdRef.current)
+            : undefined;
+          if (activeElement) {
+            activeElement.style.transform = `translate3d(0, ${offsetYRef.current}px, 0) scale(1.025)`;
+          }
+        });
+      }
+      const nearest = nearestItem(pendingClientYRef.current);
       if (nearest && nearest !== overIdRef.current) {
         overIdRef.current = nearest;
         setOverId(nearest);
@@ -172,8 +198,9 @@ export function useLongPressReorder({ itemIds, onReorder }: ReorderOptions) {
     return {
       position: "relative",
       zIndex: 30,
-      transform: `translate3d(0, ${offsetY}px, 0) scale(1.025)`,
-      transition: "box-shadow 150ms ease, transform 80ms linear",
+      transform: `translate3d(0, ${offsetYRef.current}px, 0) scale(1.025)`,
+      transition: "box-shadow 120ms ease",
+      willChange: "transform",
     };
   };
 

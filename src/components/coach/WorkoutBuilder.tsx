@@ -434,8 +434,9 @@ function ExercisePicker({
   onCreateExercise: (input: ExerciseFormValues) => Exercise;
 }) {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Array<{ key: string; exerciseId: string }>>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const selectionCounterRef = useRef(0);
 
   useEffect(() => {
     if (!open) {
@@ -453,18 +454,26 @@ function ExercisePicker({
     return m;
   }, [exercises]);
 
-  const toggle = (id: string) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const addSelection = (exerciseId: string) => {
+    selectionCounterRef.current += 1;
+    setSelected((previous) => [
+      ...previous,
+      { key: `${exerciseId}:${selectionCounterRef.current}`, exerciseId },
+    ]);
+  };
+
+  const removeSelection = (key: string) => {
+    setSelected((previous) => previous.filter((selection) => selection.key !== key));
   };
 
   const handleAdd = () => {
     if (selected.length === 0) return;
-    onAdd(selected);
+    onAdd(selected.map((selection) => selection.exerciseId));
   };
 
   const handleCreated = (input: ExerciseFormValues) => {
     const created = onCreateExercise(input);
-    setSelected((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
+    addSelection(created.id);
     setCreateOpen(false);
   };
 
@@ -514,13 +523,16 @@ function ExercisePicker({
             ) : (
               <ul role="list" className="divide-y divide-border">
                 {results.map((e) => {
-                  const isSelected = selected.includes(e.id);
+                  const selectionCount = selected.filter(
+                    (selection) => selection.exerciseId === e.id,
+                  ).length;
+                  const isSelected = selectionCount > 0;
                   return (
                     <li key={e.id}>
                       <button
                         type="button"
-                        onClick={() => toggle(e.id)}
-                        aria-pressed={isSelected}
+                        onClick={() => addSelection(e.id)}
+                        aria-label={`Add ${e.name}. Selected ${selectionCount} time${selectionCount === 1 ? "" : "s"}.`}
                         className={
                           "flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset " +
                           (isSelected
@@ -554,7 +566,11 @@ function ExercisePicker({
                               : "border-border")
                           }
                         >
-                          {isSelected && <Check className="h-3 w-3" aria-hidden="true" />}
+                          {isSelected && (
+                            <span className="text-[10px] font-bold leading-none">
+                              {selectionCount}
+                            </span>
+                          )}
                         </span>
                       </button>
                     </li>
@@ -579,14 +595,14 @@ function ExercisePicker({
           <div className="border-t border-border bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {selected.length > 0 && (
               <ul className="mb-3 flex flex-wrap gap-1.5" aria-label="Selected exercises">
-                {selected.map((id) => {
-                  const ex = exercisesById.get(id);
+                {selected.map((selection) => {
+                  const ex = exercisesById.get(selection.exerciseId);
                   if (!ex) return null;
                   return (
-                    <li key={id}>
+                    <li key={selection.key}>
                       <button
                         type="button"
-                        onClick={() => toggle(id)}
+                        onClick={() => removeSelection(selection.key)}
                         className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         aria-label={`Remove ${ex.name}`}
                       >

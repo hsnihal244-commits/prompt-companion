@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAccount } from "@/components/account/AccountProvider";
+import { SettingsMenu } from "@/components/account/SettingsMenu";
 
 export function ClientShell() {
   const navigate = useNavigate();
@@ -23,9 +24,12 @@ export function ClientShell() {
           <Link to="/" className="text-base font-semibold tracking-tight">
             No More Copium
           </Link>
-          <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-            Client Mode
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              Client Mode
+            </span>
+            <SettingsMenu />
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl px-4 py-6">
