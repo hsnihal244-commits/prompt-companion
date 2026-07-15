@@ -16,6 +16,7 @@ import { Route as CoachProgramsRouteImport } from './routes/coach.programs'
 import { Route as CoachLibraryRouteImport } from './routes/coach.library'
 import { Route as CoachExercisesRouteImport } from './routes/coach.exercises'
 import { Route as CoachDashboardRouteImport } from './routes/coach.dashboard'
+import { Route as ClientWorkoutHistoryRouteImport } from './routes/client.workout-history'
 import { Route as ClientDashboardRouteImport } from './routes/client.dashboard'
 import { Route as CoachProgramsIndexRouteImport } from './routes/coach.programs.index'
 import { Route as CoachLibraryIndexRouteImport } from './routes/coach.library.index'
@@ -67,6 +68,11 @@ const CoachDashboardRoute = CoachDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => CoachRoute,
+} as any)
+const ClientWorkoutHistoryRoute = ClientWorkoutHistoryRouteImport.update({
+  id: '/workout-history',
+  path: '/workout-history',
+  getParentRoute: () => ClientRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/workout-history': typeof ClientWorkoutHistoryRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/library': typeof CoachLibraryRouteWithChildren
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/workout-history': typeof ClientWorkoutHistoryRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
@@ -208,6 +216,7 @@ export interface FileRoutesById {
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/workout-history': typeof ClientWorkoutHistoryRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/library': typeof CoachLibraryRouteWithChildren
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/coach'
     | '/client/dashboard'
+    | '/client/workout-history'
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/library'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/coach'
     | '/client/dashboard'
+    | '/client/workout-history'
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/clients/$clientId'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/coach'
     | '/client/dashboard'
+    | '/client/workout-history'
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/library'
@@ -356,6 +368,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/dashboard'
       preLoaderRoute: typeof CoachDashboardRouteImport
       parentRoute: typeof CoachRoute
+    }
+    '/client/workout-history': {
+      id: '/client/workout-history'
+      path: '/workout-history'
+      fullPath: '/client/workout-history'
+      preLoaderRoute: typeof ClientWorkoutHistoryRouteImport
+      parentRoute: typeof ClientRoute
     }
     '/client/dashboard': {
       id: '/client/dashboard'
@@ -474,11 +493,13 @@ declare module '@tanstack/react-router' {
 
 interface ClientRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientWorkoutHistoryRoute: typeof ClientWorkoutHistoryRoute
   ClientProgramsProgramIdWorkoutsWorkoutIdRoute: typeof ClientProgramsProgramIdWorkoutsWorkoutIdRoute
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
+  ClientWorkoutHistoryRoute: ClientWorkoutHistoryRoute,
   ClientProgramsProgramIdWorkoutsWorkoutIdRoute:
     ClientProgramsProgramIdWorkoutsWorkoutIdRoute,
 }

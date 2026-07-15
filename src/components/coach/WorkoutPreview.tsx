@@ -14,6 +14,7 @@ import {
   SkipForward,
   X,
 } from "lucide-react";
+import { useAccount } from "@/components/account/AccountProvider";
 import { SettingsMenu } from "@/components/account/SettingsMenu";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,7 @@ import {
   resultKey,
 } from "@/lib/coach-workout-preview";
 import { cn } from "@/lib/utils";
+import { createWorkoutSessionId, saveWorkoutSession } from "@/lib/workout-history";
 import { WeightUnitSelector } from "./WeightUnitSelector";
 
 type Mode = "chooser" | "classic" | "guided" | "summary";
@@ -114,6 +116,7 @@ export function WorkoutPreview({
   audience?: "coach" | "client";
 }) {
   const navigate = useNavigate();
+  const { account } = useAccount();
   const [workout, setWorkout] = useState<ProgramWorkout | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [weightUnits, setWeightUnits] = useState<WeightUnit[]>([]);
@@ -189,6 +192,8 @@ export function WorkoutPreview({
       exercises={exercises}
       weightUnits={weightUnits}
       audience={audience}
+      clientId={audience === "client" && account?.role === "client" ? account.id : undefined}
+      programId={programId}
       onCreateWeightUnit={createWeightUnit}
       onExit={goBack}
     />
@@ -200,6 +205,8 @@ function PreviewSession({
   exercises,
   weightUnits,
   audience,
+  clientId,
+  programId,
   onCreateWeightUnit,
   onExit,
 }: {
@@ -207,6 +214,8 @@ function PreviewSession({
   exercises: Exercise[];
   weightUnits: WeightUnit[];
   audience: "coach" | "client";
+  clientId?: string;
+  programId?: string;
   onCreateWeightUnit: (unit: WeightUnit) => void;
   onExit: () => void;
 }) {
@@ -220,6 +229,12 @@ function PreviewSession({
   const [selectingGuidedSet, setSelectingGuidedSet] = useState(false);
   const [selectedGuidedSetKey, setSelectedGuidedSetKey] = useState<string | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
+  const [historySaveStatus, setHistorySaveStatus] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle",
+  );
+  const historyAttemptRef = useRef(0);
+  const historySessionIdRef = useRef<string | null>(null);
+  const savedHistoryAttemptRef = useRef<number | null>(null);
 
   const flat = useMemo(() => flattenSets(workout), [workout]);
   const exercisesById = useMemo(() => {
@@ -288,12 +303,56 @@ function PreviewSession({
     setMode("classic");
   };
 
+  const persistWorkoutHistory = useCallback(async () => {
+    if (audience !== "client") return;
+    if (!clientId) {
+      setHistorySaveStatus("error");
+      return;
+    }
+    const attempt = historyAttemptRef.current;
+    if (savedHistoryAttemptRef.current === attempt) return;
+    savedHistoryAttemptRef.current = attempt;
+    const sessionId = historySessionIdRef.current ?? createWorkoutSessionId();
+    historySessionIdRef.current = sessionId;
+    setHistorySaveStatus("saving");
+    try {
+      await saveWorkoutSession({
+        sessionId,
+        clientId,
+        programId,
+        workout,
+        exercises,
+        weightUnits,
+        results,
+        durationSeconds: elapsed,
+      });
+      setHistorySaveStatus("saved");
+    } catch (error) {
+      console.error("Failed to save workout history", error);
+      savedHistoryAttemptRef.current = null;
+      setHistorySaveStatus("error");
+    }
+  }, [audience, clientId, elapsed, exercises, programId, results, weightUnits, workout]);
+
   const openSummary = () => {
     setRunning(false);
     setMode("summary");
   };
 
+  useEffect(() => {
+    if (mode === "summary") void persistWorkoutHistory();
+  }, [mode, persistWorkoutHistory]);
+
+  const retryHistorySave = () => {
+    savedHistoryAttemptRef.current = null;
+    void persistWorkoutHistory();
+  };
+
   const restart = () => {
+    historyAttemptRef.current += 1;
+    historySessionIdRef.current = null;
+    savedHistoryAttemptRef.current = null;
+    setHistorySaveStatus("idle");
     dispatch({ type: "reset", results: initSessionResults(workout) });
     setElapsed(0);
     setRunning(false);
@@ -363,6 +422,8 @@ function PreviewSession({
           audience={audience}
           results={results}
           elapsed={elapsed}
+          historySaveStatus={historySaveStatus}
+          onRetryHistorySave={retryHistorySave}
           onAgain={restart}
           onBack={onExit}
         />
@@ -1449,6 +1510,8 @@ function SummaryScreen({
   audience,
   results,
   elapsed,
+  historySaveStatus,
+  onRetryHistorySave,
   onAgain,
   onBack,
 }: {
@@ -1457,6 +1520,8 @@ function SummaryScreen({
   audience: "coach" | "client";
   results: SessionResultsMap;
   elapsed: number;
+  historySaveStatus: "idle" | "saving" | "saved" | "error";
+  onRetryHistorySave: () => void;
   onAgain: () => void;
   onBack: () => void;
 }) {
@@ -1501,6 +1566,28 @@ function SummaryScreen({
           </div>
         ))}
       </dl>
+      {audience === "client" && historySaveStatus !== "idle" && (
+        <div
+          className={cn(
+            "rounded-md border px-3 py-2 text-sm",
+            historySaveStatus === "error"
+              ? "border-destructive/40 text-destructive"
+              : "border-border text-muted-foreground",
+          )}
+          aria-live="polite"
+        >
+          {historySaveStatus === "saving" && "Saving to Workout History…"}
+          {historySaveStatus === "saved" && "Saved to Workout History."}
+          {historySaveStatus === "error" && (
+            <div className="flex items-center justify-between gap-3">
+              <span>Workout History could not be saved.</span>
+              <Button type="button" size="sm" variant="outline" onClick={onRetryHistorySave}>
+                Retry
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <Button onClick={onAgain} variant="outline">
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
