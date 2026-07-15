@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { WorkoutHistoryList } from "@/components/workout-history/WorkoutHistoryList";
 import { type AppAccount, fetchAccount, updateCloudClientAssignment } from "@/lib/cloud-accounts";
 import { type ProgramSummary, loadPrograms } from "@/lib/coach-programs";
 
@@ -134,6 +135,18 @@ export function ClientManagement({ clientId }: { clientId: string }) {
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         )}
+      </section>
+
+      <section aria-labelledby="client-workout-history-heading" className="space-y-3">
+        <div>
+          <h2 id="client-workout-history-heading" className="text-lg font-semibold text-foreground">
+            Workout history
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Review completed sessions and notes this client sent to you.
+          </p>
+        </div>
+        <WorkoutHistoryList clientId={client.id} />
       </section>
     </section>
   );

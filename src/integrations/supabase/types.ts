@@ -71,6 +71,65 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_sessions: {
+        Row: {
+          client_id: string
+          completed_at: string
+          completed_sets: number
+          created_at: string
+          duration_seconds: number
+          id: string
+          program_id: string | null
+          session_data: Json
+          started_at: string
+          total_reps: number
+          total_sets: number
+          volume_by_unit: Json
+          workout_id: string
+          workout_name: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string
+          completed_sets: number
+          created_at?: string
+          duration_seconds: number
+          id?: string
+          program_id?: string | null
+          session_data: Json
+          started_at: string
+          total_reps: number
+          total_sets: number
+          volume_by_unit?: Json
+          workout_id: string
+          workout_name: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string
+          completed_sets?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          program_id?: string | null
+          session_data?: Json
+          started_at?: string
+          total_reps?: number
+          total_sets?: number
+          volume_by_unit?: Json
+          workout_id?: string
+          workout_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
