@@ -38,6 +38,7 @@ import {
   INTENSITY_LABELS,
   type Intensity,
   type ProgramWorkout,
+  SET_NOTES_MAX_LENGTH,
   SET_TYPES,
   SET_TYPE_LABELS,
   type SetType,
@@ -61,7 +62,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ExerciseFormDialog, type ExerciseFormValues } from "./ExerciseFormDialog";
 import { RestDurationPicker } from "./RestDurationPicker";
-import { WeightInputWithUnit } from "./WeightInputWithUnit";
+import { WeightUnitSelector } from "./WeightUnitSelector";
 
 export function WorkoutBuilder({
   programId,
@@ -733,15 +734,16 @@ function ExerciseCard({
           htmlFor={`notes-${instance.id}`}
           className="text-xs font-medium text-muted-foreground"
         >
-          Notes
+          Notes from coach
         </Label>
         <Textarea
           id={`notes-${instance.id}`}
           value={instance.notes ?? ""}
           onChange={(e) => updateNotes(e.target.value)}
           placeholder="Cues or coaching notes"
-          rows={2}
+          rows={1}
           maxLength={EXERCISE_NOTES_MAX_LENGTH}
+          className="h-9 min-h-9 resize-y py-2"
         />
       </div>
     </article>
@@ -771,6 +773,12 @@ function SetRow({
     return Number.isInteger(number) && number >= 1 ? number : undefined;
   };
 
+  const nonNegativeNumberOrUndefined = (raw: string): number | undefined => {
+    if (raw.trim() === "") return undefined;
+    const number = Number(raw);
+    return Number.isFinite(number) && number >= 0 ? number : undefined;
+  };
+
   const handleSetType = (nextType: SetType) => {
     if (nextType === "warmup") {
       onChange({
@@ -790,11 +798,15 @@ function SetRow({
     });
   };
 
-  const rangeInvalid =
+  const repRangeInvalid =
     set.setType !== "warmup" &&
     set.repRangeMin !== undefined &&
     set.repRangeMax !== undefined &&
     set.repRangeMax <= set.repRangeMin;
+  const weightRangeInvalid =
+    set.suggestedWeightMin !== undefined &&
+    set.suggestedWeightMax !== undefined &&
+    set.suggestedWeightMax <= set.suggestedWeightMin;
 
   return (
     <div className="rounded-md border border-border bg-background p-3">
@@ -813,19 +825,55 @@ function SetRow({
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label htmlFor={`weight-${set.id}`} className="text-xs font-medium text-muted-foreground">
-            Weight
-          </Label>
-          <WeightInputWithUnit
-            id={`weight-${set.id}`}
-            value={set.targetWeight}
-            onValueChange={(targetWeight) => onChange({ targetWeight })}
-            unitId={set.weightUnitId}
-            units={weightUnits}
-            onUnitChange={(weightUnitId) => onChange({ weightUnitId })}
-            onCreateUnit={onCreateWeightUnit}
-          />
+        <div className="col-span-2 space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs font-medium text-muted-foreground">
+              Suggested weight range
+            </Label>
+            <WeightUnitSelector
+              value={set.weightUnitId}
+              units={weightUnits}
+              onChange={(weightUnitId) => onChange({ weightUnitId })}
+              onCreate={onCreateWeightUnit}
+              compact
+            />
+          </div>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min="0"
+              value={set.suggestedWeightMin ?? ""}
+              onChange={(event) =>
+                onChange({ suggestedWeightMin: nonNegativeNumberOrUndefined(event.target.value) })
+              }
+              aria-label="Minimum suggested weight"
+              aria-invalid={weightRangeInvalid || undefined}
+              className="h-9 text-center"
+            />
+            <span className="text-muted-foreground" aria-hidden="true">
+              –
+            </span>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min="0"
+              value={set.suggestedWeightMax ?? ""}
+              onChange={(event) =>
+                onChange({ suggestedWeightMax: nonNegativeNumberOrUndefined(event.target.value) })
+              }
+              aria-label="Maximum suggested weight"
+              aria-invalid={weightRangeInvalid || undefined}
+              className="h-9 text-center"
+            />
+          </div>
+          {weightRangeInvalid && (
+            <p role="alert" className="text-xs text-destructive">
+              Maximum weight must be greater than minimum weight.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -838,6 +886,25 @@ function SetRow({
               {SET_TYPES.map((type) => (
                 <SelectItem key={type} value={type}>
                   {SET_TYPE_LABELS[type]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-muted-foreground">Intensity</Label>
+          <Select
+            value={set.intensity ?? ""}
+            onValueChange={(value) => onChange({ intensity: value as Intensity })}
+          >
+            <SelectTrigger className="h-9" aria-label="Intensity">
+              <SelectValue placeholder="—" />
+            </SelectTrigger>
+            <SelectContent>
+              {INTENSITIES.map((intensity) => (
+                <SelectItem key={intensity} value={intensity}>
+                  {INTENSITY_LABELS[intensity]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -876,7 +943,7 @@ function SetRow({
                   onChange({ repRangeMin: positiveIntegerOrUndefined(event.target.value) })
                 }
                 aria-label="Minimum reps"
-                aria-invalid={rangeInvalid || undefined}
+                aria-invalid={repRangeInvalid || undefined}
                 className="h-9 text-center"
               />
               <span className="text-muted-foreground" aria-hidden="true">
@@ -892,11 +959,11 @@ function SetRow({
                   onChange({ repRangeMax: positiveIntegerOrUndefined(event.target.value) })
                 }
                 aria-label="Maximum reps"
-                aria-invalid={rangeInvalid || undefined}
+                aria-invalid={repRangeInvalid || undefined}
                 className="h-9 text-center"
               />
             </div>
-            {rangeInvalid && (
+            {repRangeInvalid && (
               <p role="alert" className="text-xs text-destructive">
                 Maximum reps must be greater than minimum reps.
               </p>
@@ -904,30 +971,33 @@ function SetRow({
           </div>
         )}
 
-        <div className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">Intensity</Label>
-          <Select
-            value={set.intensity ?? ""}
-            onValueChange={(value) => onChange({ intensity: value as Intensity })}
-          >
-            <SelectTrigger className="h-9" aria-label="Intensity">
-              <SelectValue placeholder="—" />
-            </SelectTrigger>
-            <SelectContent>
-              {INTENSITIES.map((intensity) => (
-                <SelectItem key={intensity} value={intensity}>
-                  {INTENSITY_LABELS[intensity]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1">
+        <div className="col-span-2 space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">Rest</Label>
           <RestDurationPicker
             value={set.restSeconds}
             onChange={(restSeconds) => onChange({ restSeconds })}
+          />
+        </div>
+
+        <div className="col-span-2 space-y-1.5">
+          <Label
+            htmlFor={`set-notes-${set.id}`}
+            className="text-xs font-medium text-muted-foreground"
+          >
+            Notes from coach
+          </Label>
+          <Textarea
+            id={`set-notes-${set.id}`}
+            value={set.coachNotes ?? ""}
+            onChange={(event) =>
+              onChange({
+                coachNotes: event.target.value.trim().length > 0 ? event.target.value : undefined,
+              })
+            }
+            placeholder="Cues or coaching notes"
+            rows={1}
+            maxLength={SET_NOTES_MAX_LENGTH}
+            className="h-9 min-h-9 resize-y py-2"
           />
         </div>
       </div>
