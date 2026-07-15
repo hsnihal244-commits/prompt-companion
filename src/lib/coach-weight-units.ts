@@ -4,22 +4,27 @@ export type WeightUnit = {
   id: string;
   longForm: string;
   shortForm: string;
+  increment: number;
   isCustom: boolean;
 };
 
 export const CUSTOM_WEIGHT_UNITS_STORAGE_KEY = "no-more-copium:coach-weight-units:v1";
 export const DEFAULT_WEIGHT_UNIT_ID = "kg";
 export const WEIGHT_UNIT_LONG_FORM_MAX_LENGTH = 40;
-export const WEIGHT_UNIT_SHORT_FORM_MAX_LENGTH = 8;
+export const WEIGHT_UNIT_SHORT_FORM_MAX_LENGTH = 4;
 
 export const BUILT_IN_WEIGHT_UNITS: readonly WeightUnit[] = [
-  { id: "kg", longForm: "Kilogram", shortForm: "kg", isCustom: false },
-  { id: "lbs", longForm: "Pounds", shortForm: "lbs", isCustom: false },
-  { id: "plates", longForm: "Plates", shortForm: "P", isCustom: false },
+  { id: "kg", longForm: "Kilogram", shortForm: "kg", increment: 2.5, isCustom: false },
+  { id: "lbs", longForm: "Pounds", shortForm: "lbs", increment: 5, isCustom: false },
+  { id: "plates", longForm: "Plates", shortForm: "P", increment: 1, isCustom: false },
 ] as const;
 
 function cleanLabel(value: string): string {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function positiveNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function normalizeCustomWeightUnit(value: unknown): WeightUnit | null {
@@ -43,7 +48,13 @@ function normalizeCustomWeightUnit(value: unknown): WeightUnit | null {
   ) {
     return null;
   }
-  return { id: raw.id, longForm, shortForm, isCustom: true };
+  return {
+    id: raw.id,
+    longForm,
+    shortForm,
+    increment: positiveNumber(raw.increment) ?? 1,
+    isCustom: true,
+  };
 }
 
 export function loadCustomWeightUnits(): WeightUnit[] {
@@ -89,7 +100,22 @@ export function getWeightUnit(units: readonly WeightUnit[], id: string | undefin
   );
 }
 
-export function createCustomWeightUnit(longFormRaw: string, shortFormRaw: string): WeightUnit {
+export function getWeightIncrement(unitId: string | undefined): number {
+  return BUILT_IN_WEIGHT_UNITS.find((unit) => unit.id === unitId)?.increment ?? 1;
+}
+
+export function stepWeight(value: number, increment: number, direction: 1 | -1): number {
+  const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
+  const safeIncrement = Number.isFinite(increment) && increment > 0 ? increment : 1;
+  const next = Math.max(0, safeValue + safeIncrement * direction);
+  return Number(next.toFixed(8));
+}
+
+export function createCustomWeightUnit(
+  longFormRaw: string,
+  shortFormRaw: string,
+  increment: number,
+): WeightUnit {
   const longForm = cleanLabel(longFormRaw);
   const shortForm = cleanLabel(shortFormRaw);
   const unique =
@@ -100,6 +126,7 @@ export function createCustomWeightUnit(longFormRaw: string, shortFormRaw: string
     id: `custom_unit_${unique}`,
     longForm,
     shortForm,
+    increment: positiveNumber(increment) ?? 1,
     isCustom: true,
   };
 }

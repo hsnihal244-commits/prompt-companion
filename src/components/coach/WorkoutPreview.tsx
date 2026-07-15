@@ -3,7 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Flag,
   Minus,
   Pause,
@@ -24,18 +26,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { type Exercise, loadExercises } from "@/lib/coach-exercises";
 import {
   type WeightUnit,
   getAllWeightUnits,
   getWeightUnit,
   loadCustomWeightUnits,
+  saveCustomWeightUnits,
+  stepWeight,
 } from "@/lib/coach-weight-units";
 import {
   INTENSITY_LABELS,
   type ProgramWorkout,
+  SET_NOTES_MAX_LENGTH,
   SET_TYPE_LABELS,
   formatRepPrescription,
+  formatSuggestedWeightRange,
   loadWorkouts,
 } from "@/lib/coach-workouts";
 import {
@@ -53,6 +60,8 @@ import {
   restSecondsFor,
   resultKey,
 } from "@/lib/coach-workout-preview";
+import { cn } from "@/lib/utils";
+import { WeightUnitSelector } from "./WeightUnitSelector";
 
 type Mode = "chooser" | "classic" | "guided" | "summary";
 
@@ -119,6 +128,14 @@ export function WorkoutPreview({
     setHydrated(true);
   }, [programId, workoutId]);
 
+  const createWeightUnit = useCallback((unit: WeightUnit) => {
+    setWeightUnits((previous) => {
+      const customUnits = [...previous.filter((candidate) => candidate.isCustom), unit];
+      saveCustomWeightUnits(customUnits);
+      return getAllWeightUnits(customUnits);
+    });
+  }, []);
+
   const goBack = useCallback(() => {
     if (audience === "client") {
       void navigate({ to: "/client/dashboard" });
@@ -172,6 +189,7 @@ export function WorkoutPreview({
       exercises={exercises}
       weightUnits={weightUnits}
       audience={audience}
+      onCreateWeightUnit={createWeightUnit}
       onExit={goBack}
     />
   );
@@ -182,12 +200,14 @@ function PreviewSession({
   exercises,
   weightUnits,
   audience,
+  onCreateWeightUnit,
   onExit,
 }: {
   workout: ProgramWorkout;
   exercises: Exercise[];
   weightUnits: WeightUnit[];
   audience: "coach" | "client";
+  onCreateWeightUnit: (unit: WeightUnit) => void;
   onExit: () => void;
 }) {
   const initialResults = useMemo(() => initSessionResults(workout), [workout]);
@@ -197,6 +217,8 @@ function PreviewSession({
   const [elapsed, setElapsed] = useState(0);
   const [guidedIndex, setGuidedIndex] = useState(0);
   const [inRest, setInRest] = useState(false);
+  const [selectingGuidedSet, setSelectingGuidedSet] = useState(false);
+  const [selectedGuidedSetKey, setSelectedGuidedSetKey] = useState<string | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
 
   const flat = useMemo(() => flattenSets(workout), [workout]);
@@ -236,12 +258,34 @@ function PreviewSession({
     setMode(next);
   };
 
-  const switchMode = (next: "classic" | "guided") => {
-    if (next === "guided") {
-      setGuidedIndex(firstIncompleteIndex(flat, results));
-      setInRest(false);
-    }
-    setMode(next);
+  const beginGuidedSetSelection = () => {
+    setSelectingGuidedSet(true);
+    setSelectedGuidedSetKey(null);
+  };
+
+  const cancelGuidedSetSelection = () => {
+    setSelectingGuidedSet(false);
+    setSelectedGuidedSetKey(null);
+  };
+
+  const confirmGuidedSetSelection = () => {
+    if (!selectedGuidedSetKey) return;
+    const selectedIndex = flat.findIndex(
+      (setRef) => resultKey(setRef.exerciseInstanceId, setRef.setId) === selectedGuidedSetKey,
+    );
+    if (selectedIndex < 0) return;
+    setGuidedIndex(selectedIndex);
+    setInRest(false);
+    setSelectingGuidedSet(false);
+    setSelectedGuidedSetKey(null);
+    setMode("guided");
+  };
+
+  const switchToClassic = () => {
+    setSelectingGuidedSet(false);
+    setSelectedGuidedSetKey(null);
+    setInRest(false);
+    setMode("classic");
   };
 
   const openSummary = () => {
@@ -255,6 +299,8 @@ function PreviewSession({
     setRunning(false);
     setGuidedIndex(0);
     setInRest(false);
+    setSelectingGuidedSet(false);
+    setSelectedGuidedSetKey(null);
     setMode("chooser");
   };
 
@@ -273,11 +319,19 @@ function PreviewSession({
         <ClassicMode
           workout={workout}
           exercisesById={exercisesById}
+          weightUnits={weightUnits}
           weightUnitsById={weightUnitsById}
           results={results}
           dispatch={dispatch}
+          audience={audience}
           elapsed={elapsed}
-          onSwitchGuided={() => switchMode("guided")}
+          selectingGuidedSet={selectingGuidedSet}
+          selectedGuidedSetKey={selectedGuidedSetKey}
+          onSelectGuidedSet={setSelectedGuidedSetKey}
+          onSwitchGuided={beginGuidedSetSelection}
+          onConfirmGuidedSet={confirmGuidedSetSelection}
+          onCancelGuidedSet={cancelGuidedSetSelection}
+          onCreateWeightUnit={onCreateWeightUnit}
           onFinish={openSummary}
           onExit={requestExit}
         />
@@ -287,6 +341,7 @@ function PreviewSession({
           workout={workout}
           flat={flat}
           exercisesById={exercisesById}
+          weightUnits={weightUnits}
           weightUnitsById={weightUnitsById}
           results={results}
           dispatch={dispatch}
@@ -295,7 +350,8 @@ function PreviewSession({
           setIndex={setGuidedIndex}
           inRest={inRest}
           setInRest={setInRest}
-          onSwitchClassic={() => switchMode("classic")}
+          onCreateWeightUnit={onCreateWeightUnit}
+          onSwitchClassic={switchToClassic}
           onFinish={openSummary}
           onExit={requestExit}
         />
@@ -469,21 +525,37 @@ function PreviewHeader({
 function ClassicMode({
   workout,
   exercisesById,
+  weightUnits,
   weightUnitsById,
   results,
   dispatch,
+  audience,
   elapsed,
+  selectingGuidedSet,
+  selectedGuidedSetKey,
+  onSelectGuidedSet,
   onSwitchGuided,
+  onConfirmGuidedSet,
+  onCancelGuidedSet,
+  onCreateWeightUnit,
   onFinish,
   onExit,
 }: {
   workout: ProgramWorkout;
   exercisesById: Map<string, Exercise>;
+  weightUnits: WeightUnit[];
   weightUnitsById: Map<string, WeightUnit>;
   results: SessionResultsMap;
   dispatch: React.Dispatch<Action>;
+  audience: "coach" | "client";
   elapsed: number;
+  selectingGuidedSet: boolean;
+  selectedGuidedSetKey: string | null;
+  onSelectGuidedSet: (key: string) => void;
   onSwitchGuided: () => void;
+  onConfirmGuidedSet: () => void;
+  onCancelGuidedSet: () => void;
+  onCreateWeightUnit: (unit: WeightUnit) => void;
   onFinish: () => void;
   onExit: () => void;
 }) {
@@ -491,16 +563,26 @@ function ClassicMode({
     <>
       <PreviewHeader
         title={workout.name}
-        subtitle="Classic preview"
+        subtitle={audience === "client" ? "Classic workout" : "Classic preview"}
         elapsed={elapsed}
         right={
-          <Button size="sm" variant="outline" onClick={onSwitchGuided}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onSwitchGuided}
+            disabled={selectingGuidedSet}
+          >
             Guided
           </Button>
         }
         onExit={onExit}
       />
       <div className="mx-auto w-full max-w-md space-y-5 p-4">
+        {selectingGuidedSet && (
+          <p className="rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm text-foreground">
+            Select the set where Guided Mode should begin.
+          </p>
+        )}
         {workout.exercises.map((ex, exIdx) => {
           const def = exercisesById.get(ex.exerciseId);
           return (
@@ -516,9 +598,12 @@ function ClassicMode({
                 </h2>
               </div>
               {ex.notes && (
-                <p className="mt-1.5 whitespace-pre-line text-xs text-muted-foreground">
-                  {ex.notes}
-                </p>
+                <div className="mt-2 rounded-md bg-muted/50 px-3 py-2">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Notes from coach
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-xs text-foreground">{ex.notes}</p>
+                </div>
               )}
               <ul role="list" className="mt-3 space-y-2">
                 {ex.sets.map((set, setIdx) => {
@@ -530,25 +615,44 @@ function ClassicMode({
                       <ClassicSetRow
                         setIndex={setIdx}
                         set={set}
-                        weightUnit={
+                        suggestedWeightUnit={
                           weightUnitsById.get(set.weightUnitId) ??
                           getWeightUnit([], set.weightUnitId)
                         }
+                        weightUnits={weightUnits}
                         result={result}
-                        onWeight={(v) =>
+                        selecting={selectingGuidedSet}
+                        selected={selectedGuidedSetKey === key}
+                        onSelect={() => onSelectGuidedSet(key)}
+                        onWeight={(value) =>
                           dispatch({
                             type: "set-result",
                             key,
-                            patch: { actualWeight: clampNonNegative(v) },
+                            patch: { actualWeight: clampNonNegative(value) },
                           })
                         }
-                        onReps={(v) =>
+                        onWeightUnit={(actualWeightUnitId) =>
                           dispatch({
                             type: "set-result",
                             key,
-                            patch: { actualReps: clampNonNegative(v) },
+                            patch: { actualWeightUnitId },
                           })
                         }
+                        onReps={(value) =>
+                          dispatch({
+                            type: "set-result",
+                            key,
+                            patch: { actualReps: clampNonNegative(value) },
+                          })
+                        }
+                        onNotes={(notesToCoach) =>
+                          dispatch({
+                            type: "set-result",
+                            key,
+                            patch: { notesToCoach },
+                          })
+                        }
+                        onCreateWeightUnit={onCreateWeightUnit}
                         onToggle={() => dispatch({ type: "toggle-complete", key })}
                       />
                     </li>
@@ -559,10 +663,21 @@ function ClassicMode({
           );
         })}
 
-        <Button className="w-full" onClick={onFinish}>
-          <Flag className="h-4 w-4" aria-hidden="true" />
-          Finish preview
-        </Button>
+        {selectingGuidedSet ? (
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={onConfirmGuidedSet} disabled={!selectedGuidedSetKey}>
+              Select set
+            </Button>
+            <Button variant="outline" onClick={onCancelGuidedSet}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button className="w-full" onClick={onFinish}>
+            <Flag className="h-4 w-4" aria-hidden="true" />
+            {audience === "client" ? "Finish workout" : "Finish preview"}
+          </Button>
+        )}
       </div>
     </>
   );
@@ -571,36 +686,63 @@ function ClassicMode({
 function ClassicSetRow({
   setIndex,
   set,
-  weightUnit,
+  suggestedWeightUnit,
+  weightUnits,
   result,
+  selecting,
+  selected,
+  onSelect,
   onWeight,
+  onWeightUnit,
   onReps,
+  onNotes,
+  onCreateWeightUnit,
   onToggle,
 }: {
   setIndex: number;
   set: import("@/lib/coach-workouts").WorkoutSetPrescription;
-  weightUnit: WeightUnit;
+  suggestedWeightUnit: WeightUnit;
+  weightUnits: WeightUnit[];
   result: PreviewSetResult;
-  onWeight: (n: number) => void;
-  onReps: (n: number) => void;
+  selecting: boolean;
+  selected: boolean;
+  onSelect: () => void;
+  onWeight: (number: number) => void;
+  onWeightUnit: (unitId: string) => void;
+  onReps: (number: number) => void;
+  onNotes: (notes: string | undefined) => void;
+  onCreateWeightUnit: (unit: WeightUnit) => void;
   onToggle: () => void;
 }) {
-  const chips: string[] = [];
-  chips.push(SET_TYPE_LABELS[set.setType]);
+  const chips: string[] = [SET_TYPE_LABELS[set.setType]];
   if (set.intensity) chips.push(INTENSITY_LABELS[set.intensity]);
   const repPrescription = formatRepPrescription(set);
   if (repPrescription) chips.push(repPrescription);
-  if (set.targetWeight !== undefined) {
-    chips.push(`${set.targetWeight} ${weightUnit.shortForm}`);
-  }
+  const suggestedWeight = formatSuggestedWeightRange(set, suggestedWeightUnit.shortForm);
   if (set.restSeconds !== undefined) chips.push(`rest ${set.restSeconds}s`);
 
   return (
     <div
-      className={
-        "rounded-md border p-3 " +
-        (result.completed ? "border-primary/60 bg-primary/5" : "border-border bg-background")
+      role={selecting ? "radio" : undefined}
+      aria-checked={selecting ? selected : undefined}
+      tabIndex={selecting ? 0 : undefined}
+      onClick={selecting ? onSelect : undefined}
+      onKeyDown={
+        selecting
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelect();
+              }
+            }
+          : undefined
       }
+      className={cn(
+        "rounded-md border p-3 transition-[border-color,box-shadow,background-color]",
+        result.completed ? "border-primary/60 bg-primary/5" : "border-border bg-background",
+        selecting && "cursor-pointer",
+        selecting && selected && "border-primary bg-primary/10 ring-2 ring-primary/30",
+      )}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">Set {setIndex + 1}</span>
@@ -608,7 +750,12 @@ function ClassicSetRow({
           type="button"
           size="sm"
           variant={result.completed ? "default" : "outline"}
-          onClick={onToggle}
+          onClick={(event) => {
+            if (selecting) return;
+            event.stopPropagation();
+            onToggle();
+          }}
+          disabled={selecting}
           aria-pressed={result.completed}
           aria-label={
             result.completed
@@ -621,58 +768,87 @@ function ClassicSetRow({
           {result.completed ? "Completed" : "Complete"}
         </Button>
       </div>
-      {chips.length > 0 && (
-        <ul className="mt-2 flex flex-wrap gap-1" aria-label="Prescription">
-          {chips.map((c) => (
-            <li
-              key={c}
-              className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-            >
-              {c}
-            </li>
-          ))}
-        </ul>
+      <ul className="mt-2 flex flex-wrap gap-1" aria-label="Prescription">
+        {chips.map((chip) => (
+          <li
+            key={chip}
+            className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+          >
+            {chip}
+          </li>
+        ))}
+      </ul>
+      {suggestedWeight && (
+        <div className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Suggested weight range
+          </p>
+          <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+            {suggestedWeight}
+          </p>
+        </div>
       )}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {set.coachNotes && (
+        <div className="mt-3 rounded-md bg-muted/50 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Notes from coach
+          </p>
+          <p className="mt-1 whitespace-pre-line text-xs text-foreground">{set.coachNotes}</p>
+        </div>
+      )}
+      <div className="mt-3 space-y-3">
         <div className="space-y-1">
           <Label
             htmlFor={`w-${result.setId}`}
             className="text-xs font-medium text-muted-foreground"
           >
-            Actual weight
+            Weight done
           </Label>
-          <div className="relative">
-            <Input
-              id={`w-${result.setId}`}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="any"
-              value={result.actualWeight}
-              onChange={(e) => onWeight(Number(e.target.value))}
-              className="h-9 pr-12"
-            />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground">
-              {weightUnit.shortForm}
-            </span>
-          </div>
+          <WeightDoneInput
+            id={`w-${result.setId}`}
+            value={result.actualWeight}
+            unitId={result.actualWeightUnitId}
+            units={weightUnits}
+            disabled={selecting}
+            onValueChange={onWeight}
+            onUnitChange={onWeightUnit}
+            onCreateUnit={onCreateWeightUnit}
+          />
         </div>
         <div className="space-y-1">
           <Label
             htmlFor={`r-${result.setId}`}
             className="text-xs font-medium text-muted-foreground"
           >
-            Actual reps
+            Reps done
           </Label>
-          <Input
+          <DefaultZeroNumberInput
             id={`r-${result.setId}`}
-            type="number"
-            inputMode="numeric"
-            min="0"
-            step="1"
             value={result.actualReps}
-            onChange={(e) => onReps(Number(e.target.value))}
+            onChange={onReps}
+            integer
+            disabled={selecting}
             className="h-9"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label
+            htmlFor={`client-notes-${result.setId}`}
+            className="text-xs font-medium text-muted-foreground"
+          >
+            Notes to your coach
+          </Label>
+          <Textarea
+            id={`client-notes-${result.setId}`}
+            value={result.notesToCoach ?? ""}
+            onChange={(event) =>
+              onNotes(event.target.value.trim().length > 0 ? event.target.value : undefined)
+            }
+            placeholder="Add a note for your coach"
+            rows={1}
+            maxLength={SET_NOTES_MAX_LENGTH}
+            disabled={selecting}
+            className="h-9 min-h-9 resize-y py-2"
           />
         </div>
       </div>
@@ -684,6 +860,7 @@ function GuidedMode({
   workout,
   flat,
   exercisesById,
+  weightUnits,
   weightUnitsById,
   results,
   dispatch,
@@ -692,6 +869,7 @@ function GuidedMode({
   setIndex,
   inRest,
   setInRest,
+  onCreateWeightUnit,
   onSwitchClassic,
   onFinish,
   onExit,
@@ -699,6 +877,7 @@ function GuidedMode({
   workout: ProgramWorkout;
   flat: FlatSetRef[];
   exercisesById: Map<string, Exercise>;
+  weightUnits: WeightUnit[];
   weightUnitsById: Map<string, WeightUnit>;
   results: SessionResultsMap;
   dispatch: React.Dispatch<Action>;
@@ -707,6 +886,7 @@ function GuidedMode({
   setIndex: (index: number) => void;
   inRest: boolean;
   setInRest: (inRest: boolean) => void;
+  onCreateWeightUnit: (unit: WeightUnit) => void;
   onSwitchClassic: () => void;
   onFinish: () => void;
   onExit: () => void;
@@ -757,16 +937,24 @@ function GuidedMode({
         <PerformPanel
           ref_={currentRef}
           def={definition}
-          weightUnit={
+          suggestedWeightUnit={
             weightUnitsById.get(currentRef.set.weightUnitId) ??
             getWeightUnit([], currentRef.set.weightUnitId)
           }
+          weightUnits={weightUnits}
           result={currentResult}
           onWeight={(value) =>
             dispatch({
               type: "set-result",
               key,
               patch: { actualWeight: clampNonNegative(value) },
+            })
+          }
+          onWeightUnit={(actualWeightUnitId) =>
+            dispatch({
+              type: "set-result",
+              key,
+              patch: { actualWeightUnitId },
             })
           }
           onReps={(value) =>
@@ -776,6 +964,14 @@ function GuidedMode({
               patch: { actualReps: clampNonNegative(value) },
             })
           }
+          onNotes={(notesToCoach) =>
+            dispatch({
+              type: "set-result",
+              key,
+              patch: { notesToCoach },
+            })
+          }
+          onCreateWeightUnit={onCreateWeightUnit}
           onComplete={() => {
             dispatch({ type: "mark-complete", key });
             const nextIndex = findNextIncomplete(flat, results, index + 1);
@@ -825,19 +1021,27 @@ function describeNext(
 function PerformPanel({
   ref_,
   def,
-  weightUnit,
+  suggestedWeightUnit,
+  weightUnits,
   result,
   onWeight,
+  onWeightUnit,
   onReps,
+  onNotes,
+  onCreateWeightUnit,
   onComplete,
   onSkip,
 }: {
   ref_: FlatSetRef;
   def: Exercise | undefined;
-  weightUnit: WeightUnit;
+  suggestedWeightUnit: WeightUnit;
+  weightUnits: WeightUnit[];
   result: PreviewSetResult | undefined;
   onWeight: (number: number) => void;
+  onWeightUnit: (unitId: string) => void;
   onReps: (number: number) => void;
+  onNotes: (notes: string | undefined) => void;
+  onCreateWeightUnit: (unit: WeightUnit) => void;
   onComplete: () => void;
   onSkip: () => void;
 }) {
@@ -848,10 +1052,8 @@ function PerformPanel({
   if (set.intensity) chips.push(INTENSITY_LABELS[set.intensity]);
   const repPrescription = formatRepPrescription(set);
   if (repPrescription) chips.push(repPrescription);
-  if (set.targetWeight !== undefined) {
-    chips.push(`${set.targetWeight} ${weightUnit.shortForm} target`);
-  }
   if (set.restSeconds !== undefined) chips.push(`rest ${set.restSeconds}s`);
+  const suggestedWeight = formatSuggestedWeightRange(set, suggestedWeightUnit.shortForm);
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 p-4">
@@ -863,7 +1065,12 @@ function PerformPanel({
           {def ? def.name : "Unknown exercise"}
         </h2>
         {exercise.notes && (
-          <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{exercise.notes}</p>
+          <div className="mt-3 rounded-md bg-muted/50 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Notes from coach
+            </p>
+            <p className="mt-1 whitespace-pre-line text-sm text-foreground">{exercise.notes}</p>
+          </div>
         )}
         <ul className="mt-3 flex flex-wrap gap-1" aria-label="Prescription">
           {chips.map((chip) => (
@@ -875,35 +1082,64 @@ function PerformPanel({
             </li>
           ))}
         </ul>
+        {suggestedWeight && (
+          <div className="mt-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Suggested weight range
+            </p>
+            <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
+              {suggestedWeight}
+            </p>
+          </div>
+        )}
+        {set.coachNotes && (
+          <div className="mt-3 rounded-md bg-muted/50 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Notes from coach
+            </p>
+            <p className="mt-1 whitespace-pre-line text-sm text-foreground">{set.coachNotes}</p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 rounded-lg border border-border bg-card p-4">
         <div className="space-y-1.5">
           <Label htmlFor={`guided-weight-${set.id}`} className="text-xs text-muted-foreground">
-            Actual weight
+            Weight done
           </Label>
-          <div className="relative">
-            <Input
-              id={`guided-weight-${set.id}`}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="any"
-              value={result.actualWeight}
-              onChange={(event) => onWeight(Number(event.target.value))}
-              className="h-11 pr-12 text-base"
-            />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-muted-foreground">
-              {weightUnit.shortForm}
-            </span>
-          </div>
+          <WeightDoneInput
+            id={`guided-weight-${set.id}`}
+            value={result.actualWeight}
+            unitId={result.actualWeightUnitId}
+            units={weightUnits}
+            onValueChange={onWeight}
+            onUnitChange={onWeightUnit}
+            onCreateUnit={onCreateWeightUnit}
+            large
+          />
         </div>
         <RepsStepper
           id={`guided-reps-${set.id}`}
-          label="Actual reps"
+          label="Reps done"
           value={result.actualReps}
           onChange={onReps}
         />
+        <div className="space-y-1.5">
+          <Label htmlFor={`guided-notes-${set.id}`} className="text-xs text-muted-foreground">
+            Notes to your coach
+          </Label>
+          <Textarea
+            id={`guided-notes-${set.id}`}
+            value={result.notesToCoach ?? ""}
+            onChange={(event) =>
+              onNotes(event.target.value.trim().length > 0 ? event.target.value : undefined)
+            }
+            placeholder="Add a note for your coach"
+            rows={1}
+            maxLength={SET_NOTES_MAX_LENGTH}
+            className="h-9 min-h-9 resize-y py-2"
+          />
+        </div>
         <Button className="w-full" onClick={onComplete}>
           <Check className="h-4 w-4" aria-hidden="true" />
           Complete set
@@ -927,7 +1163,7 @@ function RepsStepper({
   id: string;
   label: string;
   value: number;
-  onChange: (n: number) => void;
+  onChange: (number: number) => void;
 }) {
   return (
     <div className="space-y-1.5">
@@ -945,14 +1181,11 @@ function RepsStepper({
         >
           <Minus className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Input
+        <DefaultZeroNumberInput
           id={id}
-          type="number"
-          inputMode="numeric"
-          min="0"
-          step="1"
           value={value}
-          onChange={(e) => onChange(clampNonNegative(Number(e.target.value)))}
+          onChange={onChange}
+          integer
           className="h-11 text-center text-base"
         />
         <Button
@@ -967,6 +1200,165 @@ function RepsStepper({
         </Button>
       </div>
     </div>
+  );
+}
+
+function WeightDoneInput({
+  id,
+  value,
+  unitId,
+  units,
+  disabled = false,
+  large = false,
+  onValueChange,
+  onUnitChange,
+  onCreateUnit,
+}: {
+  id: string;
+  value: number;
+  unitId: string;
+  units: WeightUnit[];
+  disabled?: boolean;
+  large?: boolean;
+  onValueChange: (value: number) => void;
+  onUnitChange: (unitId: string) => void;
+  onCreateUnit: (unit: WeightUnit) => void;
+}) {
+  const [draft, setDraft] = useState(() => `${value}`);
+  const [focused, setFocused] = useState(false);
+  const unit = getWeightUnit(units, unitId);
+
+  useEffect(() => {
+    if (!focused) setDraft(`${value}`);
+  }, [focused, value]);
+
+  const commit = (next: number) => {
+    const normalized = clampNonNegative(next);
+    setDraft(`${normalized}`);
+    onValueChange(normalized);
+  };
+
+  const step = (direction: 1 | -1) => {
+    const current = draft.trim() === "" ? 0 : Number(draft);
+    commit(stepWeight(current, unit.increment, direction));
+  };
+
+  return (
+    <div className="relative">
+      <div className="absolute inset-y-1 left-1 z-[1] flex overflow-hidden rounded border border-border bg-background">
+        <button
+          type="button"
+          aria-label={`Increase weight by ${unit.increment} ${unit.shortForm}`}
+          disabled={disabled}
+          onClick={() => step(1)}
+          className="inline-flex w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          <ChevronUp className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label={`Decrease weight by ${unit.increment} ${unit.shortForm}`}
+          disabled={disabled}
+          onClick={() => step(-1)}
+          className="inline-flex w-8 items-center justify-center border-l border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+        >
+          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+      <Input
+        id={id}
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="any"
+        value={draft}
+        disabled={disabled}
+        onFocus={(event) => {
+          setFocused(true);
+          event.currentTarget.select();
+        }}
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft(raw);
+          if (raw.trim() === "") return;
+          const number = Number(raw);
+          if (Number.isFinite(number) && number >= 0) onValueChange(number);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          const number = Number(draft);
+          commit(draft.trim() !== "" && Number.isFinite(number) && number >= 0 ? number : 0);
+        }}
+        className={cn(large ? "h-11 pl-[4.75rem] pr-20 text-base" : "h-9 pl-[4.75rem] pr-20")}
+      />
+      <WeightUnitSelector
+        value={unit.id}
+        units={units}
+        onChange={onUnitChange}
+        onCreate={onCreateUnit}
+        embedded
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
+function DefaultZeroNumberInput({
+  id,
+  value,
+  onChange,
+  integer = false,
+  disabled = false,
+  className,
+}: {
+  id: string;
+  value: number;
+  onChange: (value: number) => void;
+  integer?: boolean;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(() => `${value}`);
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(`${value}`);
+  }, [focused, value]);
+
+  const normalize = (number: number) => {
+    const nonNegative = clampNonNegative(number);
+    return integer ? Math.floor(nonNegative) : nonNegative;
+  };
+
+  return (
+    <Input
+      id={id}
+      type="number"
+      inputMode={integer ? "numeric" : "decimal"}
+      min="0"
+      step={integer ? "1" : "any"}
+      value={draft}
+      disabled={disabled}
+      onFocus={(event) => {
+        setFocused(true);
+        event.currentTarget.select();
+      }}
+      onChange={(event) => {
+        const raw = event.target.value;
+        setDraft(raw);
+        if (raw.trim() === "") return;
+        const number = Number(raw);
+        if (Number.isFinite(number) && number >= 0) onChange(normalize(number));
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const number = Number(draft);
+        const normalized = draft.trim() !== "" && Number.isFinite(number) ? normalize(number) : 0;
+        setDraft(`${normalized}`);
+        onChange(normalized);
+      }}
+      className={className}
+    />
   );
 }
 

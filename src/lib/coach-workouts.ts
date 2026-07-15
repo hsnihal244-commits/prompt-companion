@@ -1,4 +1,4 @@
-import { DEFAULT_WEIGHT_UNIT_ID } from "./coach-weight-units";
+import { DEFAULT_WEIGHT_UNIT_ID, getWeightIncrement } from "./coach-weight-units";
 import { emitCloudDataChanged } from "./cloud-events";
 
 export type SetType = "warmup" | "normal" | "superset" | "alternating";
@@ -6,7 +6,8 @@ export type Intensity = "2rir" | "1rir" | "failure";
 
 export type WorkoutSetPrescription = {
   id: string;
-  targetWeight?: number;
+  suggestedWeightMin?: number;
+  suggestedWeightMax?: number;
   weightUnitId: string;
   targetReps?: number;
   repRangeMin?: number;
@@ -14,6 +15,7 @@ export type WorkoutSetPrescription = {
   intensity?: Intensity;
   setType: SetType;
   restSeconds?: number;
+  coachNotes?: string;
 };
 
 export type WorkoutExercisePrescription = {
@@ -34,6 +36,7 @@ export type ProgramWorkout = {
 export const WORKOUTS_STORAGE_KEY = "no-more-copium:coach-workouts:v1";
 export const WORKOUT_NAME_MAX_LENGTH = 80;
 export const EXERCISE_NOTES_MAX_LENGTH = 300;
+export const SET_NOTES_MAX_LENGTH = 300;
 export const DEFAULT_REST_SECONDS = 90;
 
 export const SET_TYPES: readonly SetType[] = [
@@ -81,6 +84,10 @@ function nonNegativeInteger(value: unknown): number | undefined {
   return Math.max(0, Math.floor(value));
 }
 
+function optionalNotes(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
 function normalizeSet(value: unknown): WorkoutSetPrescription | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
@@ -89,6 +96,28 @@ function normalizeSet(value: unknown): WorkoutSetPrescription | null {
   const legacySetType = typeof raw.setType === "string" ? raw.setType : "normal";
   const setType: SetType =
     raw.intensity === "warmup" ? "warmup" : isSetType(legacySetType) ? legacySetType : "normal";
+  const weightUnitId =
+    typeof raw.weightUnitId === "string" && raw.weightUnitId.length > 0
+      ? raw.weightUnitId
+      : DEFAULT_WEIGHT_UNIT_ID;
+
+  let suggestedWeightMin = nonNegativeNumber(raw.suggestedWeightMin);
+  let suggestedWeightMax = nonNegativeNumber(raw.suggestedWeightMax);
+  const legacyTargetWeight = nonNegativeNumber(raw.targetWeight);
+  const increment = getWeightIncrement(weightUnitId);
+  if (suggestedWeightMin === undefined && legacyTargetWeight !== undefined) {
+    suggestedWeightMin = legacyTargetWeight;
+  }
+  if (suggestedWeightMax === undefined && suggestedWeightMin !== undefined) {
+    suggestedWeightMax = Number((suggestedWeightMin + increment).toFixed(8));
+  }
+  if (
+    suggestedWeightMin !== undefined &&
+    suggestedWeightMax !== undefined &&
+    suggestedWeightMax <= suggestedWeightMin
+  ) {
+    suggestedWeightMax = Number((suggestedWeightMin + increment).toFixed(8));
+  }
 
   const legacyExactReps = positiveInteger(raw.targetReps);
   let repRangeMin = positiveInteger(raw.repRangeMin);
@@ -109,16 +138,15 @@ function normalizeSet(value: unknown): WorkoutSetPrescription | null {
   return {
     id: raw.id,
     setType,
-    targetWeight: nonNegativeNumber(raw.targetWeight),
-    weightUnitId:
-      typeof raw.weightUnitId === "string" && raw.weightUnitId.length > 0
-        ? raw.weightUnitId
-        : DEFAULT_WEIGHT_UNIT_ID,
+    suggestedWeightMin,
+    suggestedWeightMax,
+    weightUnitId,
     targetReps: setType === "warmup" ? (legacyExactReps ?? repRangeMin) : undefined,
     repRangeMin: setType === "warmup" ? undefined : repRangeMin,
     repRangeMax: setType === "warmup" ? undefined : repRangeMax,
     intensity: isIntensity(raw.intensity) ? raw.intensity : undefined,
     restSeconds: nonNegativeInteger(raw.restSeconds),
+    coachNotes: optionalNotes(raw.coachNotes),
   };
 }
 
@@ -139,7 +167,7 @@ function normalizeExercise(value: unknown): WorkoutExercisePrescription | null {
   return {
     id: raw.id,
     exerciseId: raw.exerciseId,
-    notes: typeof raw.notes === "string" && raw.notes.trim().length > 0 ? raw.notes : undefined,
+    notes: optionalNotes(raw.notes),
     sets,
   };
 }
@@ -227,7 +255,8 @@ export function createDefaultSet(previous?: WorkoutSetPrescription): WorkoutSetP
     id: createSetId(),
     setType: "normal",
     intensity: "2rir",
-    targetWeight: 0,
+    suggestedWeightMin: 0,
+    suggestedWeightMax: getWeightIncrement(DEFAULT_WEIGHT_UNIT_ID),
     weightUnitId: DEFAULT_WEIGHT_UNIT_ID,
     restSeconds: DEFAULT_REST_SECONDS,
   };
@@ -294,10 +323,26 @@ export function isValidRepPrescription(set: WorkoutSetPrescription): boolean {
   return minimum !== undefined && maximum !== undefined && maximum > minimum;
 }
 
+export function isValidSuggestedWeightRange(set: WorkoutSetPrescription): boolean {
+  const minimum = nonNegativeNumber(set.suggestedWeightMin);
+  const maximum = nonNegativeNumber(set.suggestedWeightMax);
+  return minimum !== undefined && maximum !== undefined && maximum > minimum;
+}
+
 export function formatRepPrescription(set: WorkoutSetPrescription): string | undefined {
   if (set.setType === "warmup") {
     return set.targetReps === undefined ? undefined : `${set.targetReps} reps`;
   }
   if (set.repRangeMin === undefined || set.repRangeMax === undefined) return undefined;
   return `${set.repRangeMin}–${set.repRangeMax} reps`;
+}
+
+export function formatSuggestedWeightRange(
+  set: WorkoutSetPrescription,
+  unitShortForm: string,
+): string | undefined {
+  if (set.suggestedWeightMin === undefined || set.suggestedWeightMax === undefined) {
+    return undefined;
+  }
+  return `${set.suggestedWeightMin}–${set.suggestedWeightMax} ${unitShortForm}`;
 }

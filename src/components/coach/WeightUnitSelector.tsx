@@ -21,65 +21,22 @@ import {
 } from "@/lib/coach-weight-units";
 import { cn } from "@/lib/utils";
 
-export function WeightInputWithUnit({
-  id,
-  value,
-  onValueChange,
-  unitId,
-  units,
-  onUnitChange,
-  onCreateUnit,
-}: {
-  id: string;
-  value: number | undefined;
-  onValueChange: (value: number | undefined) => void;
-  unitId: string;
-  units: WeightUnit[];
-  onUnitChange: (unitId: string) => void;
-  onCreateUnit: (unit: WeightUnit) => void;
-}) {
-  const selectedUnit = getWeightUnit(units, unitId);
-
-  return (
-    <div className="relative">
-      <Input
-        id={id}
-        type="number"
-        inputMode="decimal"
-        step="any"
-        min="0"
-        value={value ?? ""}
-        onChange={(event) => {
-          const raw = event.target.value.trim();
-          if (raw === "") {
-            onValueChange(undefined);
-            return;
-          }
-          const number = Number(raw);
-          onValueChange(Number.isFinite(number) && number >= 0 ? number : undefined);
-        }}
-        className="h-9 pr-24"
-      />
-      <WeightUnitSelector
-        value={selectedUnit.id}
-        units={units}
-        onChange={onUnitChange}
-        onCreate={onCreateUnit}
-      />
-    </div>
-  );
-}
-
-function WeightUnitSelector({
+export function WeightUnitSelector({
   value,
   units,
   onChange,
   onCreate,
+  compact = false,
+  embedded = false,
+  disabled = false,
 }: {
   value: string;
   units: WeightUnit[];
   onChange: (unitId: string) => void;
   onCreate: (unit: WeightUnit) => void;
+  compact?: boolean;
+  embedded?: boolean;
+  disabled?: boolean;
 }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -89,16 +46,24 @@ function WeightUnitSelector({
     <>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
             aria-label={`Weight unit ${selectedUnit.longForm}`}
-            className="absolute inset-y-0 right-0 inline-flex items-center gap-1 rounded-r-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className={cn(
+              "shrink-0 font-normal",
+              compact ? "h-7 gap-1 px-2 text-xs" : "h-9",
+              embedded &&
+                "absolute inset-y-0 right-0 h-full rounded-l-none border-y-0 border-r-0 px-2 text-xs shadow-none",
+            )}
           >
-            <span className="max-w-10 truncate">{selectedUnit.shortForm}</span>
+            <span className="max-w-16 truncate">{selectedUnit.shortForm}</span>
             <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          </Button>
         </PopoverTrigger>
-        <PopoverContent align="end" className="w-64 p-2">
+        <PopoverContent align="end" className="w-72 p-2">
           <div role="listbox" aria-label="Weight unit" className="space-y-1">
             {units.map((unit) => {
               const selected = unit.id === selectedUnit.id;
@@ -113,12 +78,17 @@ function WeightUnitSelector({
                     setPopoverOpen(false);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     selected && "bg-accent",
                   )}
                 >
-                  <span>{unit.longForm}</span>
-                  {selected && <Check className="h-4 w-4" aria-hidden="true" />}
+                  <span className="min-w-0">
+                    <span className="block truncate">{unit.longForm}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {unit.shortForm} · increment {unit.increment}
+                    </span>
+                  </span>
+                  {selected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
                 </button>
               );
             })}
@@ -168,24 +138,40 @@ function CreateWeightUnitDialog({
 }) {
   const [longForm, setLongForm] = useState("");
   const [shortForm, setShortForm] = useState("");
+  const [increment, setIncrement] = useState("");
   const [error, setError] = useState<string | null>(null);
   const longFormRef = useRef<HTMLInputElement>(null);
   const errorId = useId();
+  const shortFormErrorId = useId();
 
   useEffect(() => {
     if (!open) {
       setLongForm("");
       setShortForm("");
+      setIncrement("");
       setError(null);
     }
   }, [open]);
 
+  const cleanLong = longForm.trim().replace(/\s+/g, " ");
+  const cleanShort = shortForm.trim().replace(/\s+/g, " ");
+  const parsedIncrement = Number(increment);
+  const shortFormTooLong = cleanShort.length > WEIGHT_UNIT_SHORT_FORM_MAX_LENGTH;
+  const incrementValid =
+    increment.trim().length > 0 && Number.isFinite(parsedIncrement) && parsedIncrement > 0;
+  const canSubmit =
+    cleanLong.length > 0 && cleanShort.length > 0 && !shortFormTooLong && incrementValid;
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    const cleanLong = longForm.trim().replace(/\s+/g, " ");
-    const cleanShort = shortForm.trim().replace(/\s+/g, " ");
+    setError(null);
     if (!cleanLong || !cleanShort) {
-      setError("Enter both a long form and a short form.");
+      setError("Enter a long form and a short form.");
+      return;
+    }
+    if (shortFormTooLong) return;
+    if (!incrementValid) {
+      setError("Increment must be a number greater than zero.");
       return;
     }
     const duplicate = existingUnits.some(
@@ -197,7 +183,7 @@ function CreateWeightUnitDialog({
       setError("A unit with that long form or short form already exists.");
       return;
     }
-    onCreate(createCustomWeightUnit(cleanLong, cleanShort));
+    onCreate(createCustomWeightUnit(cleanLong, cleanShort, parsedIncrement));
   };
 
   return (
@@ -212,7 +198,8 @@ function CreateWeightUnitDialog({
         <DialogHeader>
           <DialogTitle>Add custom unit</DialogTitle>
           <DialogDescription>
-            The short form appears inside weight fields. The long form appears in the unit list.
+            The increment controls how much Weight Done changes when its up or down button is
+            pressed.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4" noValidate>
@@ -228,8 +215,6 @@ function CreateWeightUnitDialog({
               }}
               placeholder="e.g. Resistance band level"
               maxLength={WEIGHT_UNIT_LONG_FORM_MAX_LENGTH}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? errorId : undefined}
             />
           </div>
           <div className="space-y-1.5">
@@ -242,9 +227,29 @@ function CreateWeightUnitDialog({
                 if (error) setError(null);
               }}
               placeholder="e.g. band"
-              maxLength={WEIGHT_UNIT_SHORT_FORM_MAX_LENGTH}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? errorId : undefined}
+              aria-invalid={shortFormTooLong || undefined}
+              aria-describedby={shortFormTooLong ? shortFormErrorId : undefined}
+            />
+            {shortFormTooLong && (
+              <p id={shortFormErrorId} role="alert" className="text-xs text-destructive">
+                Short form cannot be longer than {WEIGHT_UNIT_SHORT_FORM_MAX_LENGTH} characters.
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="weight-unit-increment">Increment</Label>
+            <Input
+              id="weight-unit-increment"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              value={increment}
+              onChange={(event) => {
+                setIncrement(event.target.value);
+                if (error) setError(null);
+              }}
+              placeholder="e.g. 2.5"
             />
           </div>
           {error && (
@@ -256,7 +261,7 @@ function CreateWeightUnitDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!longForm.trim() || !shortForm.trim()}>
+            <Button type="submit" disabled={!canSubmit}>
               Add unit
             </Button>
           </DialogFooter>

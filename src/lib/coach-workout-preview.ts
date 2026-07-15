@@ -3,13 +3,19 @@ import type {
   WorkoutExercisePrescription,
   WorkoutSetPrescription,
 } from "./coach-workouts";
-import { DEFAULT_REST_SECONDS } from "./coach-workouts";
+import {
+  DEFAULT_REST_SECONDS,
+  isValidRepPrescription,
+  isValidSuggestedWeightRange,
+} from "./coach-workouts";
 
 export type PreviewSetResult = {
   exerciseInstanceId: string;
   setId: string;
   actualWeight: number;
+  actualWeightUnitId: string;
   actualReps: number;
+  notesToCoach?: string;
   completed: boolean;
 };
 
@@ -41,7 +47,8 @@ export function initSessionResults(workout: ProgramWorkout): SessionResultsMap {
       map[resultKey(exercise.id, set.id)] = {
         exerciseInstanceId: exercise.id,
         setId: set.id,
-        actualWeight: clampNonNegative(set.targetWeight ?? 0),
+        actualWeight: 0,
+        actualWeightUnitId: set.weightUnitId,
         actualReps: 0,
         completed: false,
       };
@@ -69,7 +76,9 @@ export function flattenSets(workout: ProgramWorkout): FlatSetRef[] {
 }
 
 export function hasAnyValidSet(workout: ProgramWorkout): boolean {
-  return workout.exercises.some((exercise) => exercise.sets.length > 0);
+  return workout.exercises.some((exercise) =>
+    exercise.sets.some((set) => isValidRepPrescription(set) && isValidSuggestedWeightRange(set)),
+  );
 }
 
 export function restSecondsFor(set: WorkoutSetPrescription): number {
@@ -100,8 +109,9 @@ export function computeSummary(
       if (result?.completed) {
         completedSets += 1;
         totalReps += result.actualReps;
-        volumeByUnitId[set.weightUnitId] =
-          (volumeByUnitId[set.weightUnitId] ?? 0) + result.actualWeight * result.actualReps;
+        volumeByUnitId[result.actualWeightUnitId] =
+          (volumeByUnitId[result.actualWeightUnitId] ?? 0) +
+          result.actualWeight * result.actualReps;
       }
     }
   }
@@ -113,9 +123,9 @@ export function hasAnyProgress(workout: ProgramWorkout, results: SessionResultsM
     for (const set of exercise.sets) {
       const result = results[resultKey(exercise.id, set.id)];
       if (!result) continue;
-      if (result.completed || result.actualReps !== 0) return true;
-      const targetWeight = clampNonNegative(set.targetWeight ?? 0);
-      if (result.actualWeight !== targetWeight) return true;
+      if (result.completed || result.actualReps !== 0 || result.actualWeight !== 0) return true;
+      if (result.actualWeightUnitId !== set.weightUnitId) return true;
+      if (result.notesToCoach?.trim()) return true;
     }
   }
   return false;
