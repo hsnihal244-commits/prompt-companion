@@ -240,11 +240,7 @@ export type Database = {
         Returns: boolean
       }
       set_progress_picture_preview: {
-        Args: {
-          p_batch_id: string
-          p_client_id: string
-          p_picture_id: string
-        }
+        Args: { p_batch_id: string; p_client_id: string; p_picture_id: string }
         Returns: undefined
       }
     }
