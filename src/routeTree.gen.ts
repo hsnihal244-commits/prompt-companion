@@ -17,13 +17,16 @@ import { Route as CoachLibraryRouteImport } from './routes/coach.library'
 import { Route as CoachExercisesRouteImport } from './routes/coach.exercises'
 import { Route as CoachDashboardRouteImport } from './routes/coach.dashboard'
 import { Route as ClientWorkoutHistoryRouteImport } from './routes/client.workout-history'
+import { Route as ClientProgressPicturesRouteImport } from './routes/client.progress-pictures'
 import { Route as ClientDashboardRouteImport } from './routes/client.dashboard'
 import { Route as CoachProgramsIndexRouteImport } from './routes/coach.programs.index'
 import { Route as CoachLibraryIndexRouteImport } from './routes/coach.library.index'
+import { Route as ClientProgressPicturesIndexRouteImport } from './routes/client.progress-pictures.index'
 import { Route as CoachProgramsProgramIdRouteImport } from './routes/coach.programs.$programId'
 import { Route as CoachLibraryWorkoutsRouteImport } from './routes/coach.library.workouts'
 import { Route as CoachLibraryExercisesRouteImport } from './routes/coach.library.exercises'
 import { Route as CoachClientsClientIdRouteImport } from './routes/coach.clients.$clientId'
+import { Route as ClientProgressPicturesBatchIdRouteImport } from './routes/client.progress-pictures.$batchId'
 import { Route as CoachProgramsProgramIdIndexRouteImport } from './routes/coach.programs.$programId.index'
 import { Route as CoachLibraryWorkoutsIndexRouteImport } from './routes/coach.library.workouts.index'
 import { Route as CoachLibraryWorkoutsWorkoutIdRouteImport } from './routes/coach.library.workouts.$workoutId'
@@ -74,6 +77,11 @@ const ClientWorkoutHistoryRoute = ClientWorkoutHistoryRouteImport.update({
   path: '/workout-history',
   getParentRoute: () => ClientRoute,
 } as any)
+const ClientProgressPicturesRoute = ClientProgressPicturesRouteImport.update({
+  id: '/progress-pictures',
+  path: '/progress-pictures',
+  getParentRoute: () => ClientRoute,
+} as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -89,6 +97,12 @@ const CoachLibraryIndexRoute = CoachLibraryIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CoachLibraryRoute,
 } as any)
+const ClientProgressPicturesIndexRoute =
+  ClientProgressPicturesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ClientProgressPicturesRoute,
+  } as any)
 const CoachProgramsProgramIdRoute = CoachProgramsProgramIdRouteImport.update({
   id: '/$programId',
   path: '/$programId',
@@ -109,6 +123,12 @@ const CoachClientsClientIdRoute = CoachClientsClientIdRouteImport.update({
   path: '/clients/$clientId',
   getParentRoute: () => CoachRoute,
 } as any)
+const ClientProgressPicturesBatchIdRoute =
+  ClientProgressPicturesBatchIdRouteImport.update({
+    id: '/$batchId',
+    path: '/$batchId',
+    getParentRoute: () => ClientProgressPicturesRoute,
+  } as any)
 const CoachProgramsProgramIdIndexRoute =
   CoachProgramsProgramIdIndexRouteImport.update({
     id: '/',
@@ -169,15 +189,18 @@ export interface FileRoutesByFullPath {
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/progress-pictures': typeof ClientProgressPicturesRouteWithChildren
   '/client/workout-history': typeof ClientWorkoutHistoryRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/library': typeof CoachLibraryRouteWithChildren
   '/coach/programs': typeof CoachProgramsRouteWithChildren
+  '/client/progress-pictures/$batchId': typeof ClientProgressPicturesBatchIdRoute
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
   '/coach/library/exercises': typeof CoachLibraryExercisesRoute
   '/coach/library/workouts': typeof CoachLibraryWorkoutsRouteWithChildren
   '/coach/programs/$programId': typeof CoachProgramsProgramIdRouteWithChildren
+  '/client/progress-pictures/': typeof ClientProgressPicturesIndexRoute
   '/coach/library/': typeof CoachLibraryIndexRoute
   '/coach/programs/': typeof CoachProgramsIndexRoute
   '/coach/library/workouts/$workoutId': typeof CoachLibraryWorkoutsWorkoutIdRouteWithChildren
@@ -198,8 +221,10 @@ export interface FileRoutesByTo {
   '/client/workout-history': typeof ClientWorkoutHistoryRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
+  '/client/progress-pictures/$batchId': typeof ClientProgressPicturesBatchIdRoute
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
   '/coach/library/exercises': typeof CoachLibraryExercisesRoute
+  '/client/progress-pictures': typeof ClientProgressPicturesIndexRoute
   '/coach/library': typeof CoachLibraryIndexRoute
   '/coach/programs': typeof CoachProgramsIndexRoute
   '/coach/library/workouts': typeof CoachLibraryWorkoutsIndexRoute
@@ -216,15 +241,18 @@ export interface FileRoutesById {
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/dashboard': typeof ClientDashboardRoute
+  '/client/progress-pictures': typeof ClientProgressPicturesRouteWithChildren
   '/client/workout-history': typeof ClientWorkoutHistoryRoute
   '/coach/dashboard': typeof CoachDashboardRoute
   '/coach/exercises': typeof CoachExercisesRoute
   '/coach/library': typeof CoachLibraryRouteWithChildren
   '/coach/programs': typeof CoachProgramsRouteWithChildren
+  '/client/progress-pictures/$batchId': typeof ClientProgressPicturesBatchIdRoute
   '/coach/clients/$clientId': typeof CoachClientsClientIdRoute
   '/coach/library/exercises': typeof CoachLibraryExercisesRoute
   '/coach/library/workouts': typeof CoachLibraryWorkoutsRouteWithChildren
   '/coach/programs/$programId': typeof CoachProgramsProgramIdRouteWithChildren
+  '/client/progress-pictures/': typeof ClientProgressPicturesIndexRoute
   '/coach/library/': typeof CoachLibraryIndexRoute
   '/coach/programs/': typeof CoachProgramsIndexRoute
   '/coach/library/workouts/$workoutId': typeof CoachLibraryWorkoutsWorkoutIdRouteWithChildren
@@ -244,15 +272,18 @@ export interface FileRouteTypes {
     | '/client'
     | '/coach'
     | '/client/dashboard'
+    | '/client/progress-pictures'
     | '/client/workout-history'
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/library'
     | '/coach/programs'
+    | '/client/progress-pictures/$batchId'
     | '/coach/clients/$clientId'
     | '/coach/library/exercises'
     | '/coach/library/workouts'
     | '/coach/programs/$programId'
+    | '/client/progress-pictures/'
     | '/coach/library/'
     | '/coach/programs/'
     | '/coach/library/workouts/$workoutId'
@@ -273,8 +304,10 @@ export interface FileRouteTypes {
     | '/client/workout-history'
     | '/coach/dashboard'
     | '/coach/exercises'
+    | '/client/progress-pictures/$batchId'
     | '/coach/clients/$clientId'
     | '/coach/library/exercises'
+    | '/client/progress-pictures'
     | '/coach/library'
     | '/coach/programs'
     | '/coach/library/workouts'
@@ -290,15 +323,18 @@ export interface FileRouteTypes {
     | '/client'
     | '/coach'
     | '/client/dashboard'
+    | '/client/progress-pictures'
     | '/client/workout-history'
     | '/coach/dashboard'
     | '/coach/exercises'
     | '/coach/library'
     | '/coach/programs'
+    | '/client/progress-pictures/$batchId'
     | '/coach/clients/$clientId'
     | '/coach/library/exercises'
     | '/coach/library/workouts'
     | '/coach/programs/$programId'
+    | '/client/progress-pictures/'
     | '/coach/library/'
     | '/coach/programs/'
     | '/coach/library/workouts/$workoutId'
@@ -376,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientWorkoutHistoryRouteImport
       parentRoute: typeof ClientRoute
     }
+    '/client/progress-pictures': {
+      id: '/client/progress-pictures'
+      path: '/progress-pictures'
+      fullPath: '/client/progress-pictures'
+      preLoaderRoute: typeof ClientProgressPicturesRouteImport
+      parentRoute: typeof ClientRoute
+    }
     '/client/dashboard': {
       id: '/client/dashboard'
       path: '/dashboard'
@@ -396,6 +439,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/library/'
       preLoaderRoute: typeof CoachLibraryIndexRouteImport
       parentRoute: typeof CoachLibraryRoute
+    }
+    '/client/progress-pictures/': {
+      id: '/client/progress-pictures/'
+      path: '/'
+      fullPath: '/client/progress-pictures/'
+      preLoaderRoute: typeof ClientProgressPicturesIndexRouteImport
+      parentRoute: typeof ClientProgressPicturesRoute
     }
     '/coach/programs/$programId': {
       id: '/coach/programs/$programId'
@@ -424,6 +474,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/clients/$clientId'
       preLoaderRoute: typeof CoachClientsClientIdRouteImport
       parentRoute: typeof CoachRoute
+    }
+    '/client/progress-pictures/$batchId': {
+      id: '/client/progress-pictures/$batchId'
+      path: '/$batchId'
+      fullPath: '/client/progress-pictures/$batchId'
+      preLoaderRoute: typeof ClientProgressPicturesBatchIdRouteImport
+      parentRoute: typeof ClientProgressPicturesRoute
     }
     '/coach/programs/$programId/': {
       id: '/coach/programs/$programId/'
@@ -491,14 +548,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ClientProgressPicturesRouteChildren {
+  ClientProgressPicturesBatchIdRoute: typeof ClientProgressPicturesBatchIdRoute
+  ClientProgressPicturesIndexRoute: typeof ClientProgressPicturesIndexRoute
+}
+
+const ClientProgressPicturesRouteChildren: ClientProgressPicturesRouteChildren =
+  {
+    ClientProgressPicturesBatchIdRoute: ClientProgressPicturesBatchIdRoute,
+    ClientProgressPicturesIndexRoute: ClientProgressPicturesIndexRoute,
+  }
+
+const ClientProgressPicturesRouteWithChildren =
+  ClientProgressPicturesRoute._addFileChildren(
+    ClientProgressPicturesRouteChildren,
+  )
+
 interface ClientRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientProgressPicturesRoute: typeof ClientProgressPicturesRouteWithChildren
   ClientWorkoutHistoryRoute: typeof ClientWorkoutHistoryRoute
   ClientProgramsProgramIdWorkoutsWorkoutIdRoute: typeof ClientProgramsProgramIdWorkoutsWorkoutIdRoute
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
+  ClientProgressPicturesRoute: ClientProgressPicturesRouteWithChildren,
   ClientWorkoutHistoryRoute: ClientWorkoutHistoryRoute,
   ClientProgramsProgramIdWorkoutsWorkoutIdRoute:
     ClientProgramsProgramIdWorkoutsWorkoutIdRoute,
