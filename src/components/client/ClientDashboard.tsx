@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/account/AccountProvider";
+import { ProgressPicturesDashboardSection } from "@/components/client/progress-pictures/ProgressPicturesDashboardSection";
 import {
   type DayAssignment,
   type ProgramSummary,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/coach-programs";
 import { type ProgramWorkout, loadWorkouts } from "@/lib/coach-workouts";
 import { getClientGreeting } from "@/lib/client-greeting";
+import { EMPTY_PROGRESS_PICTURE_BATCHES } from "@/lib/progress-pictures";
 
 export function ClientDashboard() {
   const { account: client, refresh } = useAccount();
@@ -84,6 +86,8 @@ export function ClientDashboard() {
           <TodayState assignment={assignment} hasAssignedProgram={assignedProgram !== undefined} />
         )}
       </section>
+
+      <ProgressPicturesDashboardSection batches={EMPTY_PROGRESS_PICTURE_BATCHES} />
     </section>
   );
 }
