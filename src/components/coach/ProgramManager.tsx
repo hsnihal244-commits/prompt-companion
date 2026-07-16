@@ -41,10 +41,7 @@ export function ProgramManager() {
 
   return (
     <>
-      <ul
-        role="list"
-        className="-mx-2 grid list-none grid-cols-2 gap-2 p-0 sm:mx-0 sm:grid-cols-3 md:grid-cols-4"
-      >
+      <ul role="list" className="-mx-2 grid list-none grid-cols-3 gap-2 p-0 sm:mx-0">
         {programs.map((program) => (
           <li key={program.id} className="contents">
             <ProgramCard program={program} />
@@ -66,9 +63,9 @@ function ProgramCard({ program }: { program: ProgramSummary }) {
       to="/coach/programs/$programId"
       params={{ programId: program.id }}
       aria-label={`Open ${program.name}`}
-      className="flex aspect-[17/23] flex-col overflow-hidden rounded-lg border border-border bg-card p-3 text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-accent/70"
+      className="flex aspect-[17/23] flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5 text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-accent/70 sm:p-3"
     >
-      <h3 className="text-base font-medium leading-tight [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:6] overflow-hidden break-words">
+      <h3 className="overflow-hidden break-words text-sm font-medium leading-tight [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:7] sm:text-base">
         {program.name}
       </h3>
     </Link>
@@ -83,7 +80,7 @@ function CreateProgramTile({ onClick }: { onClick: () => void }) {
       aria-label="Create new program"
       className="flex aspect-[17/23] items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-muted/70"
     >
-      <Plus className="h-9 w-9" strokeWidth={2} aria-hidden="true" />
+      <Plus className="h-7 w-7 sm:h-9 sm:w-9" strokeWidth={2} aria-hidden="true" />
     </button>
   );
 }

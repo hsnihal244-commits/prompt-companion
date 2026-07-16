@@ -59,7 +59,10 @@ export function ClientShell() {
       >
         <ul className="mx-auto flex w-full max-w-3xl items-stretch">
           {CLIENT_NAV_ITEMS.map((item) => {
-            const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+            const active =
+              item.to === "/client/dashboard"
+                ? pathname === item.to || pathname.startsWith("/client/progress-pictures")
+                : pathname === item.to || pathname.startsWith(`${item.to}/`);
             const Icon = item.icon;
             return (
               <li key={item.to} className="flex-1">
