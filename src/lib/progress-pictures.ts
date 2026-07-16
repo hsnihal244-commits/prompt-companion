@@ -1,8 +1,11 @@
 export type ProgressPicture = {
   id: string;
   imageUrl: string;
+  storagePath: string;
   width: number;
   height: number;
+  byteSize: number;
+  displayOrder: number;
   createdAt: string;
 };
 
@@ -11,7 +14,7 @@ export type ProgressPictureBatch = {
   clientId: string;
   captureDate: string;
   timezone: string;
-  previewPictureId: string;
+  previewPictureId?: string;
   pictures: ProgressPicture[];
   createdAt: string;
 };
@@ -56,6 +59,13 @@ export function latestProgressPictureBatches(
   count: number,
 ): ProgressPictureBatch[] {
   return sortProgressPictureBatches(batches).slice(0, Math.max(0, Math.floor(count)));
+}
+
+export function localProgressPictureDate(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function getProgressPicturePreview(

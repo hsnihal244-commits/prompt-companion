@@ -71,6 +71,95 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_picture_batches: {
+        Row: {
+          capture_date: string
+          client_id: string
+          created_at: string
+          id: string
+          preview_picture_id: string | null
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          capture_date: string
+          client_id: string
+          created_at?: string
+          id: string
+          preview_picture_id?: string | null
+          timezone: string
+          updated_at?: string
+        }
+        Update: {
+          capture_date?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          preview_picture_id?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_picture_batches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progress_picture_batches_preview_picture_fkey"
+            columns: ["preview_picture_id"]
+            isOneToOne: false
+            referencedRelation: "progress_pictures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      progress_pictures: {
+        Row: {
+          batch_id: string
+          byte_size: number
+          created_at: string
+          display_order: number
+          height: number
+          id: string
+          mime_type: string
+          storage_path: string
+          width: number
+        }
+        Insert: {
+          batch_id: string
+          byte_size: number
+          created_at?: string
+          display_order: number
+          height: number
+          id: string
+          mime_type?: string
+          storage_path: string
+          width: number
+        }
+        Update: {
+          batch_id?: string
+          byte_size?: number
+          created_at?: string
+          display_order?: number
+          height?: number
+          id?: string
+          mime_type?: string
+          storage_path?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_pictures_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "progress_picture_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_sessions: {
         Row: {
           client_id: string
@@ -135,7 +224,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_progress_picture_batch: {
+        Args: {
+          p_batch_id: string
+          p_capture_date: string
+          p_client_id: string
+          p_pictures: Json
+          p_preview_picture_id: string
+          p_timezone: string
+        }
+        Returns: string
+      }
+      is_progress_picture_storage_path: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
+      set_progress_picture_preview: {
+        Args: {
+          p_batch_id: string
+          p_client_id: string
+          p_picture_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

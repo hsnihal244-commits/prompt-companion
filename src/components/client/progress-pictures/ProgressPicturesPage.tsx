@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Grid2X2, ImageIcon, List } from "lucide-react";
+import { AlertCircle, ArrowLeft, Grid2X2, ImageIcon, List, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/account/AccountProvider";
 import {
-  EMPTY_PROGRESS_PICTURE_BATCHES,
   PROGRESS_PICTURE_VIEW_STORAGE_KEY,
   type ProgressPictureBatch,
   formatProgressPictureDate,
@@ -14,13 +13,16 @@ import {
   sortProgressPictureBatches,
 } from "@/lib/progress-pictures";
 import { cn } from "@/lib/utils";
+import { useProgressPictureBatches } from "@/hooks/use-progress-picture-batches";
 import { ProgressPictureTile } from "./ProgressPictureTile";
 
 type ProgressPictureView = "list" | "grid";
 
 export function ProgressPicturesPage() {
   const { account } = useAccount();
-  const batches = EMPTY_PROGRESS_PICTURE_BATCHES;
+  const progressPictures = useProgressPictureBatches(
+    account?.role === "client" ? account.id : undefined,
+  );
   const [view, setView] = useState<ProgressPictureView>("list");
 
   useEffect(() => {
@@ -68,12 +70,31 @@ export function ProgressPicturesPage() {
         </div>
       </div>
 
-      {batches.length === 0 ? (
+      {progressPictures.loading ? (
+        <p className="text-sm text-muted-foreground">Loading progress pictures…</p>
+      ) : progressPictures.error ? (
+        <div className="rounded-lg border border-destructive/40 p-4">
+          <p className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            {progressPictures.error}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() => void progressPictures.refresh()}
+          >
+            <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Try again
+          </Button>
+        </div>
+      ) : progressPictures.batches.length === 0 ? (
         <EmptyProgressPictures />
       ) : view === "list" ? (
-        <ProgressPictureList batches={batches} />
+        <ProgressPictureList batches={progressPictures.batches} />
       ) : (
-        <ProgressPictureGrid batches={batches} />
+        <ProgressPictureGrid batches={progressPictures.batches} />
       )}
     </section>
   );
