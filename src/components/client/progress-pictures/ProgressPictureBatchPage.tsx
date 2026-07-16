@@ -1,31 +1,90 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Check } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, RotateCw } from "lucide-react";
+import { useAccount } from "@/components/account/AccountProvider";
 import { Button } from "@/components/ui/button";
-import { EMPTY_PROGRESS_PICTURE_BATCHES, formatProgressPictureDate } from "@/lib/progress-pictures";
+import { useProgressPictureBatches } from "@/hooks/use-progress-picture-batches";
+import { setProgressPicturePreview } from "@/lib/cloud-progress-pictures";
+import { formatProgressPictureDate } from "@/lib/progress-pictures";
 import { ProgressPictureTile } from "./ProgressPictureTile";
 
 export function ProgressPictureBatchPage({ batchId }: { batchId: string }) {
-  const batch = EMPTY_PROGRESS_PICTURE_BATCHES.find((candidate) => candidate.id === batchId);
+  const { account } = useAccount();
+  const clientId = account?.role === "client" ? account.id : undefined;
+  const progressPictures = useProgressPictureBatches(clientId);
+  const batch = progressPictures.batches.find((candidate) => candidate.id === batchId);
   const [previewPictureId, setPreviewPictureId] = useState("");
+  const [savingPictureId, setSavingPictureId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setPreviewPictureId(batch?.previewPictureId ?? "");
   }, [batch?.previewPictureId]);
 
-  if (!batch) {
+  if (progressPictures.loading) {
+    return (
+      <section className="space-y-6">
+        <BackToProgressPictures />
+        <p className="text-sm text-muted-foreground">Loading progress pictures…</p>
+      </section>
+    );
+  }
+
+  if (progressPictures.error) {
+    return (
+      <section className="space-y-6">
+        <BackToProgressPictures />
+        <div className="rounded-lg border border-destructive/40 p-4">
+          <p className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            {progressPictures.error}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() => void progressPictures.refresh()}
+          >
+            <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Try again
+          </Button>
+        </div>
+      </section>
+    );
+  }
+
+  if (!batch || !clientId) {
     return (
       <section className="space-y-6">
         <BackToProgressPictures />
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
           <h1 className="text-xl font-semibold text-foreground">Progress pictures unavailable</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Daily picture batches will become available after Cloud uploads are enabled.
+            This daily progress-picture batch could not be found.
           </p>
         </div>
       </section>
     );
   }
+
+  const choosePreview = async (pictureId: string) => {
+    if (pictureId === previewPictureId || savingPictureId) return;
+    const previous = previewPictureId;
+    setPreviewPictureId(pictureId);
+    setSavingPictureId(pictureId);
+    setSaveError(null);
+    try {
+      await setProgressPicturePreview({ clientId, batchId: batch.id, pictureId });
+      await progressPictures.refresh();
+    } catch (error) {
+      console.error("Failed to update progress-picture preview", error);
+      setPreviewPictureId(previous);
+      setSaveError("The preview could not be updated. Try again.");
+    } finally {
+      setSavingPictureId(null);
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -42,9 +101,16 @@ export function ProgressPictureBatchPage({ batchId }: { batchId: string }) {
         </p>
       </div>
 
+      {saveError && (
+        <p className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive">
+          {saveError}
+        </p>
+      )}
+
       <ul role="list" className="grid list-none grid-cols-3 gap-2 p-0">
         {batch.pictures.map((picture) => {
           const selected = picture.id === previewPictureId;
+          const saving = picture.id === savingPictureId;
           return (
             <li key={picture.id}>
               <ProgressPictureTile
@@ -56,11 +122,12 @@ export function ProgressPictureBatchPage({ batchId }: { batchId: string }) {
                     size="sm"
                     variant={selected ? "default" : "outline"}
                     aria-pressed={selected}
-                    onClick={() => setPreviewPictureId(picture.id)}
+                    disabled={savingPictureId !== null}
+                    onClick={() => void choosePreview(picture.id)}
                     className="h-7 w-full gap-1 px-1 text-[10px]"
                   >
                     {selected && <Check className="h-3 w-3" aria-hidden="true" />}
-                    Preview
+                    {saving ? "Saving…" : "Preview"}
                   </Button>
                 }
               />

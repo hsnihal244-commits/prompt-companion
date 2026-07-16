@@ -12,7 +12,7 @@ import {
 } from "@/lib/coach-programs";
 import { type ProgramWorkout, loadWorkouts } from "@/lib/coach-workouts";
 import { getClientGreeting } from "@/lib/client-greeting";
-import { EMPTY_PROGRESS_PICTURE_BATCHES } from "@/lib/progress-pictures";
+import { useProgressPictureBatches } from "@/hooks/use-progress-picture-batches";
 
 export function ClientDashboard() {
   const { account: client, refresh } = useAccount();
@@ -20,6 +20,9 @@ export function ClientDashboard() {
   const [workouts, setWorkouts] = useState<ProgramWorkout[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [hydrated, setHydrated] = useState(false);
+  const progressPictures = useProgressPictureBatches(
+    client?.role === "client" ? client.id : undefined,
+  );
 
   useEffect(() => {
     const loadCachedCoachData = () => {
@@ -87,7 +90,12 @@ export function ClientDashboard() {
         )}
       </section>
 
-      <ProgressPicturesDashboardSection batches={EMPTY_PROGRESS_PICTURE_BATCHES} />
+      <ProgressPicturesDashboardSection
+        batches={progressPictures.batches}
+        loading={progressPictures.loading}
+        error={progressPictures.error}
+        onRetry={() => void progressPictures.refresh()}
+      />
     </section>
   );
 }

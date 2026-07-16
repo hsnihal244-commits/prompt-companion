@@ -1,17 +1,29 @@
 import { Link } from "@tanstack/react-router";
-import { Camera, ChevronRight } from "lucide-react";
+import { AlertCircle, Camera, ChevronRight, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   type ProgressPictureBatch,
   formatProgressPictureDate,
   getProgressPicturePreview,
   latestProgressPictureBatches,
+  localProgressPictureDate,
 } from "@/lib/progress-pictures";
 import { ProgressPictureTile } from "./ProgressPictureTile";
 
-export function ProgressPicturesDashboardSection({ batches }: { batches: ProgressPictureBatch[] }) {
+export function ProgressPicturesDashboardSection({
+  batches,
+  loading,
+  error,
+  onRetry,
+}: {
+  batches: ProgressPictureBatch[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}) {
   const latest = latestProgressPictureBatches(batches, 3);
   const tiles = Array.from({ length: 3 }, (_, index) => latest[index]);
+  const hasTodayBatch = batches.some((batch) => batch.captureDate === localProgressPictureDate());
 
   return (
     <section aria-labelledby="progress-pictures-heading" className="mt-10 space-y-3">
@@ -55,13 +67,37 @@ export function ProgressPicturesDashboardSection({ batches }: { batches: Progres
         </div>
       </Link>
 
-      <Button type="button" className="w-full" disabled aria-describedby="progress-upload-status">
-        <Camera className="h-4 w-4" aria-hidden="true" />
-        Take today&apos;s progress pictures
-      </Button>
-      <p id="progress-upload-status" className="text-xs text-muted-foreground">
-        Camera and gallery uploads will be enabled in the next batch.
-      </p>
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 px-3 py-2">
+          <p className="flex min-w-0 items-center gap-2 text-xs text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{error}</span>
+          </p>
+          <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+            <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {!hasTodayBatch && (
+        <>
+          <Button
+            type="button"
+            className="w-full"
+            disabled
+            aria-describedby="progress-upload-status"
+          >
+            <Camera className="h-4 w-4" aria-hidden="true" />
+            Take today&apos;s progress pictures
+          </Button>
+          <p id="progress-upload-status" className="text-xs text-muted-foreground">
+            {loading
+              ? "Checking today’s progress pictures…"
+              : "Camera and gallery uploads will be enabled in the next batch."}
+          </p>
+        </>
+      )}
     </section>
   );
 }
