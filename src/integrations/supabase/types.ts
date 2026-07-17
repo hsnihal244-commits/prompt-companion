@@ -355,11 +355,7 @@ export type Database = {
     }
     Functions: {
       append_progress_pictures_to_batch: {
-        Args: {
-          p_batch_id: string
-          p_client_id: string
-          p_pictures: Json
-        }
+        Args: { p_batch_id: string; p_client_id: string; p_pictures: Json }
         Returns: string
       }
       create_progress_picture_batch: {
