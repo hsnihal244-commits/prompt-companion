@@ -91,10 +91,12 @@ export function ClientDashboard() {
       </section>
 
       <ProgressPicturesDashboardSection
+        clientId={client.id}
         batches={progressPictures.batches}
         loading={progressPictures.loading}
         error={progressPictures.error}
         onRetry={() => void progressPictures.refresh()}
+        onUploaded={progressPictures.refresh}
       />
     </section>
   );

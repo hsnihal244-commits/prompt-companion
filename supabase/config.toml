@@ -1,1 +1,4 @@
 project_id = "lhmgqhcketyqphdlvspy"
+
+[functions.progress-picture-media]
+verify_jwt = false
