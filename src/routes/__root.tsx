@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { AppInteractionGuards } from "../components/AppInteractionGuards";
 import { AccountProvider } from "../components/account/AccountProvider";
 import { CloudDataBootstrap } from "../components/cloud/CloudDataBootstrap";
+import { ChatProvider } from "../components/chat/ChatProvider";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -141,9 +142,11 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AccountProvider>
         <CloudDataBootstrap>
-          <AppInteractionGuards />
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
+          <ChatProvider>
+            <AppInteractionGuards />
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </ChatProvider>
         </CloudDataBootstrap>
       </AccountProvider>
     </QueryClientProvider>
