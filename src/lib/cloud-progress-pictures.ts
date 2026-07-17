@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { progressPictureStorage } from "./progress-picture-storage-client";
 import type { ProgressPicture, ProgressPictureBatch } from "./progress-pictures";
 import { sortProgressPictureBatches } from "./progress-pictures";
 
@@ -33,7 +34,7 @@ export async function fetchProgressPictureBatches(
   const paths = pictures.map((picture) => picture.storage_path);
   const signedUrls = new Map<string, string>();
   if (paths.length > 0) {
-    const { data: signedRows, error: signedError } = await supabase.storage
+    const { data: signedRows, error: signedError } = await progressPictureStorage.storage
       .from(PROGRESS_PICTURES_BUCKET)
       .createSignedUrls(paths, SIGNED_URL_SECONDS);
     if (signedError) throw signedError;
