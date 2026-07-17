@@ -77,6 +77,18 @@ export function weekdayFromDate(date: Date): Weekday {
   return WEEKDAYS[date.getDay()] ?? "sunday";
 }
 
+export function getAssignedWorkoutIds(program: ProgramSummary): string[] {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const weekday of getOrderedWeekdays(program.firstDayOfWeek)) {
+    const assignment = program.dayAssignments[weekday];
+    if (assignment?.type !== "workout" || seen.has(assignment.workoutId)) continue;
+    seen.add(assignment.workoutId);
+    ids.push(assignment.workoutId);
+  }
+  return ids;
+}
+
 function isValidDayAssignment(value: unknown): value is DayAssignment {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;

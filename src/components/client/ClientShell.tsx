@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { History, LayoutDashboard, type LucideIcon } from "lucide-react";
+import { ClipboardList, History, LayoutDashboard, type LucideIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useAccount } from "@/components/account/AccountProvider";
 import { SettingsMenu } from "@/components/account/SettingsMenu";
@@ -7,13 +7,14 @@ import { ChatButton } from "@/components/chat/ChatButton";
 import { cn } from "@/lib/utils";
 
 type ClientNavItem = {
-  to: "/client/dashboard" | "/client/workout-history";
+  to: "/client/dashboard" | "/client/program" | "/client/workout-history";
   label: string;
   icon: LucideIcon;
 };
 
 const CLIENT_NAV_ITEMS: ClientNavItem[] = [
   { to: "/client/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/client/program", label: "Your Program", icon: ClipboardList },
   { to: "/client/workout-history", label: "Workout History", icon: History },
 ];
 
