@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, Camera, ChevronRight, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,18 +10,24 @@ import {
   localProgressPictureDate,
 } from "@/lib/progress-pictures";
 import { ProgressPictureTile } from "./ProgressPictureTile";
+import { ProgressPictureUploadDialog } from "./ProgressPictureUploadDialog";
 
 export function ProgressPicturesDashboardSection({
+  clientId,
   batches,
   loading,
   error,
   onRetry,
+  onUploaded,
 }: {
+  clientId: string;
   batches: ProgressPictureBatch[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onUploaded: () => Promise<void>;
 }) {
+  const [uploadOpen, setUploadOpen] = useState(false);
   const latest = latestProgressPictureBatches(batches, 3);
   const tiles = Array.from({ length: 3 }, (_, index) => latest[index]);
   const hasTodayBatch = batches.some((batch) => batch.captureDate === localProgressPictureDate());
@@ -85,8 +92,9 @@ export function ProgressPicturesDashboardSection({
           <Button
             type="button"
             className="w-full"
-            disabled
+            disabled={loading || error !== null}
             aria-describedby="progress-upload-status"
+            onClick={() => setUploadOpen(true)}
           >
             <Camera className="h-4 w-4" aria-hidden="true" />
             Take today&apos;s progress pictures
@@ -94,10 +102,17 @@ export function ProgressPicturesDashboardSection({
           <p id="progress-upload-status" className="text-xs text-muted-foreground">
             {loading
               ? "Checking today’s progress pictures…"
-              : "Camera and gallery uploads will be enabled in the next batch."}
+              : "Choose your camera or gallery. Pictures are optimized before upload."}
           </p>
         </>
       )}
+
+      <ProgressPictureUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        clientId={clientId}
+        onUploaded={onUploaded}
+      />
     </section>
   );
 }

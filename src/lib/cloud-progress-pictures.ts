@@ -1,6 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Json, Tables } from "@/integrations/supabase/types";
 import { progressPictureStorage } from "./progress-picture-storage-client";
+import {
+  createProgressBatchId,
+  type ProcessedProgressPicture,
+  progressPictureStoragePath,
+} from "./progress-picture-processing";
 import type { ProgressPicture, ProgressPictureBatch } from "./progress-pictures";
 import { sortProgressPictureBatches } from "./progress-pictures";
 
@@ -57,6 +62,78 @@ export async function fetchProgressPictureBatches(
   );
 }
 
+export async function uploadProgressPictureBatch({
+  clientId,
+  captureDate,
+  timezone,
+  pictures,
+  onProgress,
+}: {
+  clientId: string;
+  captureDate: string;
+  timezone: string;
+  pictures: ProcessedProgressPicture[];
+  onProgress?: (uploaded: number, total: number) => void;
+}): Promise<string> {
+  if (pictures.length < 1 || pictures.length > 6) {
+    throw new Error("Select between 1 and 6 progress pictures.");
+  }
+
+  const batchId = createProgressBatchId();
+  const uploadedPaths: string[] = [];
+  try {
+    for (let index = 0; index < pictures.length; index += 1) {
+      const picture = pictures[index];
+      const storagePath = progressPictureStoragePath({
+        clientId,
+        batchId,
+        pictureId: picture.id,
+      });
+      uploadedPaths.push(storagePath);
+      await uploadProgressPictureObject({ clientId, batchId, picture, storagePath });
+      onProgress?.(index + 1, pictures.length);
+    }
+
+    const previewPictureId = pictures[randomIndex(pictures.length)].id;
+    const pictureMetadata = pictures.map((picture, displayOrder) => ({
+      id: picture.id,
+      storage_path: progressPictureStoragePath({ clientId, batchId, pictureId: picture.id }),
+      width: picture.width,
+      height: picture.height,
+      byte_size: picture.byteSize,
+      display_order: displayOrder,
+    }));
+    const { error } = await supabase.rpc("create_progress_picture_batch", {
+      p_batch_id: batchId,
+      p_client_id: clientId,
+      p_capture_date: captureDate,
+      p_timezone: timezone,
+      p_pictures: pictureMetadata as unknown as Json,
+      p_preview_picture_id: previewPictureId,
+    });
+    if (error) {
+      const { data: existingBatch } = await supabase
+        .from("progress_picture_batches")
+        .select("id")
+        .eq("id", batchId)
+        .eq("client_id", clientId)
+        .maybeSingle();
+      if (existingBatch) return batchId;
+      throw error;
+    }
+    return batchId;
+  } catch (error) {
+    if (uploadedPaths.length > 0) {
+      try {
+        await cleanupProgressPictureObjects({ clientId, paths: uploadedPaths });
+      } catch (cleanupError) {
+        console.error("Failed to clean up progress-picture uploads", cleanupError);
+      }
+    }
+    throw error;
+  }
+}
+
 export async function setProgressPicturePreview({
   clientId,
   batchId,
@@ -72,6 +149,55 @@ export async function setProgressPicturePreview({
     p_picture_id: pictureId,
   });
   if (error) throw error;
+}
+
+async function uploadProgressPictureObject({
+  clientId,
+  batchId,
+  picture,
+  storagePath,
+}: {
+  clientId: string;
+  batchId: string;
+  picture: ProcessedProgressPicture;
+  storagePath: string;
+}): Promise<void> {
+  const body = new FormData();
+  body.append("action", "upload");
+  body.append("clientId", clientId);
+  body.append("batchId", batchId);
+  body.append("pictureId", picture.id);
+  body.append("file", picture.blob, `${picture.id}.webp`);
+  const { data, error } = await progressPictureStorage.functions.invoke("progress-picture-media", {
+    body,
+  });
+  if (error) throw new Error(`Progress picture upload failed: ${error.message}`);
+  if (!data || typeof data !== "object" || (data as { path?: unknown }).path !== storagePath) {
+    throw new Error("Progress picture upload returned an unexpected path.");
+  }
+}
+
+async function cleanupProgressPictureObjects({
+  clientId,
+  paths,
+}: {
+  clientId: string;
+  paths: string[];
+}): Promise<void> {
+  const { error } = await progressPictureStorage.functions.invoke("progress-picture-media", {
+    body: { action: "cleanup", clientId, paths },
+  });
+  if (error) throw error;
+}
+
+function randomIndex(length: number): number {
+  if (length <= 1) return 0;
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const value = new Uint32Array(1);
+    crypto.getRandomValues(value);
+    return value[0] % length;
+  }
+  return Math.floor(Math.random() * length);
 }
 
 function mapBatch(row: BatchRow, pictures: ProgressPicture[]): ProgressPictureBatch {
