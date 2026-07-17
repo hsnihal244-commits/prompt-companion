@@ -67,19 +67,28 @@ export async function uploadProgressPictureBatch({
   captureDate,
   timezone,
   pictures,
+  existingBatch,
   onProgress,
 }: {
   clientId: string;
   captureDate: string;
   timezone: string;
   pictures: ProcessedProgressPicture[];
+  existingBatch?: ProgressPictureBatch;
   onProgress?: (uploaded: number, total: number) => void;
 }): Promise<string> {
-  if (pictures.length < 1 || pictures.length > 6) {
-    throw new Error("Select between 1 and 6 progress pictures.");
+  const existingCount = existingBatch?.pictures.length ?? 0;
+  if (pictures.length < 1 || existingCount + pictures.length > 6) {
+    throw new Error(`Select between 1 and ${Math.max(0, 6 - existingCount)} progress pictures.`);
+  }
+  if (existingBatch && existingBatch.clientId !== clientId) {
+    throw new Error("The selected batch does not belong to this Client.");
+  }
+  if (existingBatch && existingBatch.captureDate !== captureDate) {
+    throw new Error("The selected date does not match this progress-picture batch.");
   }
 
-  const batchId = createProgressBatchId();
+  const batchId = existingBatch?.id ?? createProgressBatchId();
   const uploadedPaths: string[] = [];
   try {
     for (let index = 0; index < pictures.length; index += 1) {
@@ -94,31 +103,42 @@ export async function uploadProgressPictureBatch({
       onProgress?.(index + 1, pictures.length);
     }
 
-    const previewPictureId = pictures[randomIndex(pictures.length)].id;
-    const pictureMetadata = pictures.map((picture, displayOrder) => ({
+    const pictureMetadata = pictures.map((picture, index) => ({
       id: picture.id,
       storage_path: progressPictureStoragePath({ clientId, batchId, pictureId: picture.id }),
       width: picture.width,
       height: picture.height,
       byte_size: picture.byteSize,
-      display_order: displayOrder,
+      display_order: existingCount + index,
     }));
-    const { error } = await supabase.rpc("create_progress_picture_batch", {
-      p_batch_id: batchId,
-      p_client_id: clientId,
-      p_capture_date: captureDate,
-      p_timezone: timezone,
-      p_pictures: pictureMetadata as unknown as Json,
-      p_preview_picture_id: previewPictureId,
-    });
+
+    const error = existingBatch
+      ? (
+          await supabase.rpc("append_progress_pictures_to_batch", {
+            p_batch_id: batchId,
+            p_client_id: clientId,
+            p_pictures: pictureMetadata as unknown as Json,
+          })
+        ).error
+      : (
+          await supabase.rpc("create_progress_picture_batch", {
+            p_batch_id: batchId,
+            p_client_id: clientId,
+            p_capture_date: captureDate,
+            p_timezone: timezone,
+            p_pictures: pictureMetadata as unknown as Json,
+            p_preview_picture_id: pictures[randomIndex(pictures.length)].id,
+          })
+        ).error;
+
     if (error) {
-      const { data: existingBatch } = await supabase
-        .from("progress_picture_batches")
+      const pictureIds = pictures.map((picture) => picture.id);
+      const { data: committedPictures } = await supabase
+        .from("progress_pictures")
         .select("id")
-        .eq("id", batchId)
-        .eq("client_id", clientId)
-        .maybeSingle();
-      if (existingBatch) return batchId;
+        .eq("batch_id", batchId)
+        .in("id", pictureIds);
+      if (committedPictures?.length === pictures.length) return batchId;
       throw error;
     }
     return batchId;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertCircle, Camera, ChevronRight, RotateCw } from "lucide-react";
+import { AlertCircle, Camera, Check, ChevronRight, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   type ProgressPictureBatch,
@@ -8,7 +8,9 @@ import {
   getProgressPicturePreview,
   latestProgressPictureBatches,
   localProgressPictureDate,
+  progressPictureHabitDays,
 } from "@/lib/progress-pictures";
+import { cn } from "@/lib/utils";
 import { ProgressPictureTile } from "./ProgressPictureTile";
 import { ProgressPictureUploadDialog } from "./ProgressPictureUploadDialog";
 
@@ -29,7 +31,8 @@ export function ProgressPicturesDashboardSection({
 }) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const latest = latestProgressPictureBatches(batches, 3);
-  const tiles = Array.from({ length: 3 }, (_, index) => latest[index]);
+  const habitDays = progressPictureHabitDays(batches);
+  const habitComplete = habitDays >= 7;
   const hasTodayBatch = batches.some((batch) => batch.captureDate === localProgressPictureDate());
 
   return (
@@ -45,7 +48,9 @@ export function ProgressPicturesDashboardSection({
               Progress Pictures
             </h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Click to see Progress Pictures and adjust preview
+              {habitComplete
+                ? "Click to see Progress Pictures and adjust preview"
+                : "Take progress pictures for seven days to start building the habit."}
             </p>
           </div>
           <ChevronRight
@@ -54,24 +59,24 @@ export function ProgressPicturesDashboardSection({
           />
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {tiles.map((batch, index) => {
-            const preview = batch ? getProgressPicturePreview(batch) : undefined;
-            return (
-              <ProgressPictureTile
-                key={batch?.id ?? `empty-${index}`}
-                imageUrl={preview?.imageUrl}
-                alt={
-                  batch
-                    ? `Progress picture from ${formatProgressPictureDate(batch.captureDate, "long")}`
-                    : "No progress picture yet"
-                }
-                eager
-                className="transition-colors group-hover:border-primary/40"
-              />
-            );
-          })}
-        </div>
+        {habitComplete ? (
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {latest.map((batch) => {
+              const preview = getProgressPicturePreview(batch);
+              return (
+                <ProgressPictureTile
+                  key={batch.id}
+                  imageUrl={preview?.imageUrl}
+                  alt={`Progress picture from ${formatProgressPictureDate(batch.captureDate, "long")}`}
+                  eager
+                  className="transition-colors group-hover:border-primary/40"
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <HabitProgress completedDays={habitDays} />
+        )}
       </Link>
 
       {error && (
@@ -111,8 +116,71 @@ export function ProgressPicturesDashboardSection({
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         clientId={clientId}
+        batches={batches}
+        initialCaptureDate={localProgressPictureDate()}
         onUploaded={onUploaded}
       />
     </section>
+  );
+}
+
+function HabitProgress({ completedDays }: { completedDays: number }) {
+  return (
+    <div
+      className="mt-3"
+      role="progressbar"
+      aria-label={`${completedDays} of 7 progress-picture days complete`}
+      aria-valuemin={0}
+      aria-valuemax={7}
+      aria-valuenow={completedDays}
+    >
+      <div className="grid grid-cols-6 gap-1.5">
+        {Array.from({ length: 6 }, (_, index) => {
+          const complete = index < completedDays;
+          return (
+            <div
+              key={index}
+              className={cn(
+                "flex aspect-square items-center justify-center rounded-md border",
+                complete
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-dashed border-border bg-muted/30 text-muted-foreground",
+              )}
+              aria-label={`Day ${index + 1} ${complete ? "complete" : "not complete"}`}
+            >
+              {complete ? (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Camera className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div
+        className={cn(
+          "mt-1.5 flex h-12 items-center justify-center rounded-md border",
+          completedDays >= 7
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-dashed border-border bg-muted/30 text-muted-foreground",
+        )}
+        aria-label={`Day 7 ${completedDays >= 7 ? "complete" : "not complete"}`}
+      >
+        {completedDays >= 7 ? (
+          <span className="inline-flex items-center gap-2 text-sm font-semibold">
+            <Check className="h-4 w-4" aria-hidden="true" />
+            Seven-day habit complete
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-2 text-xs font-medium">
+            <Camera className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+            Day 7
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-right text-xs font-medium text-muted-foreground">
+        {completedDays}/7 days
+      </p>
+    </div>
   );
 }
