@@ -29,6 +29,7 @@ import {
   savePrograms,
 } from "@/lib/coach-programs";
 import { type ProgramWorkout, loadWorkouts, sortWorkouts } from "@/lib/coach-workouts";
+import { ProgramDetailsEditor } from "./ProgramDetailsEditor";
 import { ProgramWorkoutsSection } from "./ProgramWorkoutsSection";
 
 const WEEKDAYS: Weekday[] = [
@@ -96,7 +97,7 @@ export function ProgramDetail({ programId }: { programId: string }) {
   return (
     <div className="space-y-6">
       <BackLink />
-      <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
+      <ProgramDetailsEditor program={program} onChange={updateProgram} />
       <div className="max-w-md space-y-4">
         <FirstDaySelector value={program.firstDayOfWeek} onChange={setFirstDayOfWeek} />
         <DayRow
