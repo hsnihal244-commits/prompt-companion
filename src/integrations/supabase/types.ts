@@ -354,6 +354,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_progress_picture_batch: {
+        Args: {
+          p_batch_id: string
+          p_capture_date: string
+          p_client_id: string
+          p_pictures: Json
+          p_preview_picture_id: string
+          p_timezone: string
+        }
+        Returns: string
+      }
       get_chat_unread_counts: {
         Args: { p_account_id: string }
         Returns: {
@@ -364,6 +375,10 @@ export type Database = {
       get_or_create_chat_thread: {
         Args: { p_client_id: string }
         Returns: string
+      }
+      is_progress_picture_storage_path: {
+        Args: { object_name: string }
+        Returns: boolean
       }
       mark_chat_read: {
         Args: { p_account_id: string; p_client_id: string }
@@ -377,21 +392,6 @@ export type Database = {
           p_sender_account_id: string
         }
         Returns: string
-      }
-      create_progress_picture_batch: {
-        Args: {
-          p_batch_id: string
-          p_capture_date: string
-          p_client_id: string
-          p_pictures: Json
-          p_preview_picture_id: string
-          p_timezone: string
-        }
-        Returns: string
-      }
-      is_progress_picture_storage_path: {
-        Args: { object_name: string }
-        Returns: boolean
       }
       set_progress_picture_preview: {
         Args: { p_batch_id: string; p_client_id: string; p_picture_id: string }
