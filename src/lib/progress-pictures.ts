@@ -25,6 +25,7 @@ export type ProgressPictureMonthGroup = {
 };
 
 export const PROGRESS_PICTURE_VIEW_STORAGE_KEY = "no-more-copium:client-progress-picture-view:v1";
+export const PROGRESS_PICTURE_HABIT_DAYS = 7;
 export const EMPTY_PROGRESS_PICTURE_BATCHES: ProgressPictureBatch[] = [];
 
 export function sortProgressPictureBatches(
@@ -59,6 +60,15 @@ export function latestProgressPictureBatches(
   count: number,
 ): ProgressPictureBatch[] {
   return sortProgressPictureBatches(batches).slice(0, Math.max(0, Math.floor(count)));
+}
+
+export function progressPictureHabitDays(batches: readonly ProgressPictureBatch[]): number {
+  const uniqueDates = new Set(
+    batches
+      .map((batch) => batch.captureDate)
+      .filter((captureDate) => /^\d{4}-\d{2}-\d{2}$/.test(captureDate)),
+  );
+  return Math.min(PROGRESS_PICTURE_HABIT_DAYS, uniqueDates.size);
 }
 
 export function localProgressPictureDate(date = new Date()): string {

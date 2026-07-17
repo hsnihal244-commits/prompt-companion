@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, Grid2X2, ImageIcon, List, RotateCw } from "lucide-react";
+import { AlertCircle, ArrowLeft, Grid2X2, ImageIcon, List, Plus, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/account/AccountProvider";
 import {
@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useProgressPictureBatches } from "@/hooks/use-progress-picture-batches";
 import { ProgressPictureTile } from "./ProgressPictureTile";
+import { ProgressPictureUploadDialog } from "./ProgressPictureUploadDialog";
 
 type ProgressPictureView = "list" | "grid";
 
@@ -24,6 +25,7 @@ export function ProgressPicturesPage() {
     account?.role === "client" ? account.id : undefined,
   );
   const [view, setView] = useState<ProgressPictureView>("list");
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(PROGRESS_PICTURE_VIEW_STORAGE_KEY);
@@ -90,12 +92,26 @@ export function ProgressPicturesPage() {
           </Button>
         </div>
       ) : progressPictures.batches.length === 0 ? (
-        <EmptyProgressPictures />
+        <EmptyProgressPictures onAdd={() => setUploadOpen(true)} />
       ) : view === "list" ? (
-        <ProgressPictureList batches={progressPictures.batches} />
+        <div className="space-y-6">
+          <div className="grid grid-cols-3 gap-2">
+            <AddProgressPicturesTile onClick={() => setUploadOpen(true)} />
+          </div>
+          <ProgressPictureList batches={progressPictures.batches} />
+        </div>
       ) : (
-        <ProgressPictureGrid batches={progressPictures.batches} />
+        <ProgressPictureGrid batches={progressPictures.batches} onAdd={() => setUploadOpen(true)} />
       )}
+
+      <ProgressPictureUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        clientId={account.id}
+        batches={progressPictures.batches}
+        allowDateSelection
+        onUploaded={progressPictures.refresh}
+      />
     </section>
   );
 }
@@ -128,15 +144,16 @@ function ViewButton({
   );
 }
 
-function EmptyProgressPictures() {
+function EmptyProgressPictures({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="rounded-lg border border-dashed border-border p-8 text-center">
       <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
       <h2 className="mt-3 text-base font-medium text-foreground">No progress pictures yet</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-        Your daily progress-picture batches will appear here after uploads are enabled.
+        Add pictures for today or choose an earlier date to begin your progress history.
       </p>
-      <Button type="button" variant="outline" className="mt-5" disabled>
+      <Button type="button" variant="outline" className="mt-5" onClick={onAdd}>
+        <Plus className="h-4 w-4" aria-hidden="true" />
         Add progress pictures
       </Button>
     </div>
@@ -184,9 +201,18 @@ function ProgressPictureList({ batches }: { batches: ProgressPictureBatch[] }) {
   );
 }
 
-function ProgressPictureGrid({ batches }: { batches: ProgressPictureBatch[] }) {
+function ProgressPictureGrid({
+  batches,
+  onAdd,
+}: {
+  batches: ProgressPictureBatch[];
+  onAdd: () => void;
+}) {
   return (
     <ul role="list" className="grid list-none grid-cols-3 gap-2 p-0">
+      <li>
+        <AddProgressPicturesTile onClick={onAdd} />
+      </li>
       {sortProgressPictureBatches(batches).map((batch) => {
         const preview = getProgressPicturePreview(batch);
         const longDate = formatProgressPictureDate(batch.captureDate, "long");
@@ -218,5 +244,18 @@ function ProgressPictureGrid({ batches }: { batches: ProgressPictureBatch[] }) {
         );
       })}
     </ul>
+  );
+}
+
+function AddProgressPicturesTile({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex aspect-[17/23] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-2 text-center text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Plus className="h-6 w-6" aria-hidden="true" />
+      <span className="text-[10px] font-medium">Add pictures</span>
+    </button>
   );
 }

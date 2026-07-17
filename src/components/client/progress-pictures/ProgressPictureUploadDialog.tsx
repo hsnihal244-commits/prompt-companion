@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Images, LoaderCircle, Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +19,7 @@ import {
   formatProgressPictureBytes,
   processProgressPictures,
 } from "@/lib/progress-picture-processing";
-import { localProgressPictureDate } from "@/lib/progress-pictures";
+import { type ProgressPictureBatch, localProgressPictureDate } from "@/lib/progress-pictures";
 
 type StagedPicture = ProcessedProgressPicture & { previewUrl: string };
 
@@ -25,11 +27,17 @@ export function ProgressPictureUploadDialog({
   open,
   onOpenChange,
   clientId,
+  batches,
+  allowDateSelection = false,
+  initialCaptureDate,
   onUploaded,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientId: string;
+  batches: ProgressPictureBatch[];
+  allowDateSelection?: boolean;
+  initialCaptureDate?: string;
   onUploaded: () => Promise<void>;
 }) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +49,11 @@ export function ProgressPictureUploadDialog({
   const [uploading, setUploading] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [captureDate, setCaptureDate] = useState(initialCaptureDate ?? localProgressPictureDate());
+
+  const selectedBatch = batches.find((batch) => batch.captureDate === captureDate);
+  const existingCount = selectedBatch?.pictures.length ?? 0;
+  const availableSlots = Math.max(0, MAX_PROGRESS_PICTURES_PER_BATCH - existingCount);
 
   useEffect(() => {
     if (open || uploading) return;
@@ -52,7 +65,8 @@ export function ProgressPictureUploadDialog({
     setProcessingProgress(0);
     setUploadedCount(0);
     setError(null);
-  }, [open, uploading]);
+    setCaptureDate(initialCaptureDate ?? localProgressPictureDate());
+  }, [initialCaptureDate, open, uploading]);
 
   picturesRef.current = pictures;
 
@@ -65,9 +79,9 @@ export function ProgressPictureUploadDialog({
 
   const addFiles = async (files: FileList | null) => {
     if (!files || files.length === 0 || processing || uploading) return;
-    const slots = MAX_PROGRESS_PICTURES_PER_BATCH - pictures.length;
+    const slots = availableSlots - pictures.length;
     if (slots <= 0) {
-      setError(`You can upload up to ${MAX_PROGRESS_PICTURES_PER_BATCH} pictures per day.`);
+      setError(`This date already has the maximum of ${MAX_PROGRESS_PICTURES_PER_BATCH} pictures.`);
       return;
     }
     const selected = Array.from(files);
@@ -110,7 +124,14 @@ export function ProgressPictureUploadDialog({
   };
 
   const upload = async () => {
-    if (pictures.length === 0 || processing || uploading) return;
+    if (
+      pictures.length === 0 ||
+      processing ||
+      uploading ||
+      pictures.length > availableSlots ||
+      !captureDate
+    )
+      return;
     setUploading(true);
     setUploadedCount(0);
     setError(null);
@@ -118,9 +139,10 @@ export function ProgressPictureUploadDialog({
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       await uploadProgressPictureBatch({
         clientId,
-        captureDate: localProgressPictureDate(),
+        captureDate,
         timezone,
         pictures,
+        existingBatch: selectedBatch,
         onProgress: (uploaded) => setUploadedCount(uploaded),
       });
       await onUploaded();
@@ -138,7 +160,8 @@ export function ProgressPictureUploadDialog({
     }
   };
 
-  const atLimit = pictures.length >= MAX_PROGRESS_PICTURES_PER_BATCH;
+  const atLimit = existingCount + pictures.length >= MAX_PROGRESS_PICTURES_PER_BATCH;
+  const tooManyForDate = pictures.length > availableSlots;
   const progressValue = uploading
     ? Math.round((uploadedCount / Math.max(1, pictures.length)) * 100)
     : processingProgress;
@@ -152,12 +175,36 @@ export function ProgressPictureUploadDialog({
     >
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Today&apos;s progress pictures</DialogTitle>
+          <DialogTitle>
+            {allowDateSelection ? "Add progress pictures" : "Today’s progress pictures"}
+          </DialogTitle>
           <DialogDescription>
-            Add up to six pictures. They are resized, converted to WebP, and stripped of camera
-            metadata before upload.
+            Add up to six pictures per date. They are resized, converted to WebP, and stripped of
+            camera metadata before upload.
           </DialogDescription>
         </DialogHeader>
+
+        {allowDateSelection && (
+          <div className="space-y-1.5">
+            <Label htmlFor="progress-picture-date">Picture date</Label>
+            <Input
+              id="progress-picture-date"
+              type="date"
+              value={captureDate}
+              max={localProgressPictureDate()}
+              disabled={processing || uploading}
+              onChange={(event) => {
+                setCaptureDate(event.target.value);
+                setError(null);
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              {selectedBatch
+                ? `This date already has ${existingCount} picture${existingCount === 1 ? "" : "s"}. New pictures will be added to the same batch.`
+                : "A new daily batch will be created for this date."}
+            </p>
+          </div>
+        )}
 
         <input
           ref={cameraInputRef}
@@ -207,7 +254,7 @@ export function ProgressPictureUploadDialog({
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-foreground">
-                Selected pictures ({pictures.length}/{MAX_PROGRESS_PICTURES_PER_BATCH})
+                New pictures ({pictures.length}/{availableSlots})
               </p>
               {!atLimit && !processing && !uploading && (
                 <Button
@@ -269,6 +316,16 @@ export function ProgressPictureUploadDialog({
           </div>
         )}
 
+        {tooManyForDate && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive"
+          >
+            Remove {pictures.length - availableSlots} picture
+            {pictures.length - availableSlots === 1 ? "" : "s"} to fit this date&apos;s batch.
+          </p>
+        )}
+
         {error && (
           <p
             role="alert"
@@ -294,7 +351,9 @@ export function ProgressPictureUploadDialog({
           </Button>
           <Button
             type="button"
-            disabled={pictures.length === 0 || processing || uploading}
+            disabled={
+              pictures.length === 0 || processing || uploading || tooManyForDate || !captureDate
+            }
             onClick={() => void upload()}
           >
             <Upload className="h-4 w-4" aria-hidden="true" />
