@@ -3,6 +3,7 @@ import { LayoutDashboard, Library, ListChecks } from "lucide-react";
 import { useEffect, type ComponentType } from "react";
 import { useAccount } from "@/components/account/AccountProvider";
 import { SettingsMenu } from "@/components/account/SettingsMenu";
+import { ChatButton } from "@/components/chat/ChatButton";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -48,6 +49,7 @@ export function CoachShell() {
             <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
               Coach Mode
             </span>
+            <ChatButton />
             <SettingsMenu />
           </div>
         </div>

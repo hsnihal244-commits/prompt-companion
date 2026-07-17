@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Play } from "lucide-react";
+import { MessageCircle, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/account/AccountProvider";
 import { ProgressPicturesDashboardSection } from "@/components/client/progress-pictures/ProgressPicturesDashboardSection";
+import { useChat } from "@/components/chat/ChatProvider";
 import {
   type DayAssignment,
   type ProgramSummary,
@@ -16,6 +17,7 @@ import { useProgressPictureBatches } from "@/hooks/use-progress-picture-batches"
 
 export function ClientDashboard() {
   const { account: client, refresh } = useAccount();
+  const { summary: chatSummary } = useChat();
   const [programs, setPrograms] = useState<ProgramSummary[]>([]);
   const [workouts, setWorkouts] = useState<ProgramWorkout[]>([]);
   const [now, setNow] = useState(() => new Date());
@@ -58,6 +60,18 @@ export function ClientDashboard() {
 
   return (
     <section>
+      {chatSummary.unreadMessages > 0 && (
+        <Link
+          to="/client/chat"
+          className="mb-3 flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <MessageCircle className="h-4 w-4 text-primary" aria-hidden="true" />
+          <span>
+            You have {chatSummary.unreadMessages} unread message
+            {chatSummary.unreadMessages === 1 ? "" : "s"} from your coach.
+          </span>
+        </Link>
+      )}
       <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
         {getClientGreeting(client.name, now)}
       </h1>

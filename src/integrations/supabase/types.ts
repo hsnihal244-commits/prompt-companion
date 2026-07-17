@@ -71,6 +71,136 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_account_id: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id: string
+          sender_account_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_account_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_sender_account_id_fkey"
+            columns: ["sender_account_id"]
+            isOneToOne: false
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_reads: {
+        Row: {
+          account_id: string
+          last_read_at: string
+          thread_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          last_read_at?: string
+          thread_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          last_read_at?: string
+          thread_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_reads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_reads_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          client_id: string
+          coach_id: string
+          created_at: string
+          id: string
+          last_message_at: string | null
+          last_message_body: string | null
+          last_message_sender_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_body?: string | null
+          last_message_sender_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_body?: string | null
+          last_message_sender_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_last_message_sender_id_fkey"
+            columns: ["last_message_sender_id"]
+            isOneToOne: false
+            referencedRelation: "app_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       progress_picture_batches: {
         Row: {
           capture_date: string
@@ -235,9 +365,33 @@ export type Database = {
         }
         Returns: string
       }
+      get_chat_unread_counts: {
+        Args: { p_account_id: string }
+        Returns: {
+          client_id: string
+          unread_messages: number
+        }[]
+      }
+      get_or_create_chat_thread: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
       is_progress_picture_storage_path: {
         Args: { object_name: string }
         Returns: boolean
+      }
+      mark_chat_read: {
+        Args: { p_account_id: string; p_client_id: string }
+        Returns: undefined
+      }
+      send_chat_message: {
+        Args: {
+          p_body: string
+          p_client_id: string
+          p_message_id: string
+          p_sender_account_id: string
+        }
+        Returns: string
       }
       set_progress_picture_preview: {
         Args: { p_batch_id: string; p_client_id: string; p_picture_id: string }
