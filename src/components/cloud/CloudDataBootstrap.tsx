@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useAccount } from "@/components/account/AccountProvider";
 import { Button } from "@/components/ui/button";
 import { EXERCISES_STORAGE_KEY } from "@/lib/coach-exercises";
 import { PROGRAMS_STORAGE_KEY } from "@/lib/coach-programs";
@@ -30,6 +31,7 @@ function writeCloudRowToCache(row: CloudStateRow): void {
 }
 
 export function CloudDataBootstrap({ children }: { children: ReactNode }) {
+  const { user, loading: accountLoading } = useAccount();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const timersRef = useRef<Partial<Record<CloudDataField, number>>>({});
 
@@ -58,10 +60,16 @@ export function CloudDataBootstrap({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (accountLoading) return;
+    if (!user) {
+      setStatus("ready");
+      return;
+    }
+
     void load();
 
     const channel = supabase
-      .channel("no-more-copium-app-state")
+      .channel(`no-more-copium-app-state-${user.id}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "app_state", filter: "id=eq.global" },
@@ -102,9 +110,9 @@ export function CloudDataBootstrap({ children }: { children: ReactNode }) {
         if (timer !== undefined) window.clearTimeout(timer);
       }
     };
-  }, [load]);
+  }, [accountLoading, load, user]);
 
-  if (status === "loading") {
+  if (accountLoading || status === "loading") {
     return <div className="min-h-[100dvh] bg-background" aria-label="Loading Cloud data" />;
   }
 

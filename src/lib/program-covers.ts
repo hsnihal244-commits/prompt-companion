@@ -1,4 +1,4 @@
-import { progressPictureStorage } from "./progress-picture-storage-client";
+import { supabase } from "@/integrations/supabase/client";
 import type { ProgramSummary } from "./coach-programs";
 import type { ProcessedProgramCover } from "./program-cover-processing";
 
@@ -15,7 +15,7 @@ export async function fetchProgramCoverUrls(
   if (coveredPrograms.length === 0) return {};
 
   const paths = coveredPrograms.map((program) => program.coverImagePath);
-  const { data, error } = await progressPictureStorage.storage
+  const { data, error } = await supabase.storage
     .from(PROGRAM_COVERS_BUCKET)
     .createSignedUrls(paths, SIGNED_URL_SECONDS);
   if (error) throw error;
@@ -41,7 +41,7 @@ export async function uploadProgramCover({
   body.append("coachId", coachId);
   body.append("programId", programId);
   body.append("file", cover.blob, "cover.webp");
-  const { data, error } = await progressPictureStorage.functions.invoke("program-cover-media", {
+  const { data, error } = await supabase.functions.invoke("program-cover-media", {
     body,
   });
   if (error) throw new Error(`Program cover upload failed: ${error.message}`);

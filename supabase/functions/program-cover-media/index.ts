@@ -17,15 +17,13 @@ Deno.serve(async (request) => {
   try {
     const url = Deno.env.get("SUPABASE_URL");
     const secretKey = getSecretKey();
-    if (!url || !secretKey) throw new Error("Cloud storage credentials are unavailable.");
+    if (!url || !secretKey) throw new HttpError("Cloud storage credentials are unavailable.", 503);
 
-    const database = createClient(url, secretKey, {
-      global: { fetch: createDatabaseFetch(secretKey) },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const database = createDatabaseClient(url, secretKey);
     const storage = createClient(url, secretKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    const authUserId = await requireAuthenticatedUser(database, request);
 
     const form = await request.formData();
     const coachId = stringField(form, "coachId");
@@ -43,7 +41,7 @@ Deno.serve(async (request) => {
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (!isWebP(bytes)) return json({ error: "The cover is not a valid WebP image" }, 415);
 
-    await requireCoach(database, coachId);
+    await requireOwnedCoach(database, coachId, authUserId);
     const path = `${programId}/cover.webp`;
     const { error } = await storage.storage.from(BUCKET).upload(path, bytes, {
       contentType: "image/webp",
@@ -54,12 +52,53 @@ Deno.serve(async (request) => {
     return json({ path, byteSize: bytes.byteLength, width: 850, height: 1150 });
   } catch (error) {
     console.error("Program cover request failed", error);
+    const status = error instanceof HttpError ? error.status : 400;
     return json(
       { error: error instanceof Error ? error.message : "Unexpected cover upload error" },
-      400,
+      status,
     );
   }
 });
+
+async function requireAuthenticatedUser(
+  database: DatabaseClient,
+  request: Request,
+): Promise<string> {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) throw new HttpError("Authentication required.", 401);
+  const accessToken = authorization.slice("Bearer ".length).trim();
+  if (!accessToken || accessToken.split(".").length !== 3) {
+    throw new HttpError("A valid session is required.", 401);
+  }
+  const { data, error } = await database.auth.getUser(accessToken);
+  if (error || !data.user) throw new HttpError("Your session is invalid or expired.", 401);
+  return data.user.id;
+}
+
+async function requireOwnedCoach(
+  database: DatabaseClient,
+  coachId: string,
+  authUserId: string,
+): Promise<void> {
+  const { data, error } = await database
+    .from("app_accounts")
+    .select("id")
+    .eq("id", coachId)
+    .eq("auth_user_id", authUserId)
+    .eq("role", "coach")
+    .eq("is_preview", false)
+    .maybeSingle();
+  if (error || !data) throw new HttpError("Coach access is required.", 403);
+}
+
+type DatabaseClient = ReturnType<typeof createDatabaseClient>;
+
+function createDatabaseClient(url: string, secretKey: string) {
+  return createClient(url, secretKey, {
+    global: { fetch: createDatabaseFetch(secretKey) },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 function getSecretKey(): string | undefined {
   const standard = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -88,19 +127,6 @@ function createDatabaseFetch(secretKey: string): typeof fetch {
   };
 }
 
-async function requireCoach(
-  database: ReturnType<typeof createClient>,
-  coachId: string,
-): Promise<void> {
-  const { data, error } = await database
-    .from("app_accounts")
-    .select("id")
-    .eq("id", coachId)
-    .eq("role", "coach")
-    .maybeSingle();
-  if (error || !data) throw new Error("Coach account was not found");
-}
-
 function stringField(form: FormData, name: string): string {
   const value = form.get(name);
   if (typeof value !== "string" || value.length === 0) throw new Error(`${name} is required`);
@@ -113,6 +139,15 @@ function isWebP(bytes: Uint8Array): boolean {
 
 function ascii(bytes: Uint8Array, start: number, end: number): string {
   return String.fromCharCode(...bytes.slice(start, end));
+}
+
+class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
 }
 
 function json(value: unknown, status = 200): Response {

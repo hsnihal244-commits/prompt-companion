@@ -21,13 +21,13 @@ const CLIENT_NAV_ITEMS: ClientNavItem[] = [
 export function ClientShell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
-  const { account, loading } = useAccount();
+  const { user, account, loading } = useAccount();
 
   useEffect(() => {
     if (!loading && account?.role !== "client") {
-      void navigate({ to: "/", replace: true });
+      void navigate({ to: user && !account ? "/onboarding" : "/", replace: true });
     }
-  }, [account?.role, loading, navigate]);
+  }, [account, loading, navigate, user]);
 
   if (loading || account?.role !== "client") {
     return <div className="min-h-[100dvh] bg-background" />;
@@ -41,9 +41,11 @@ export function ClientShell() {
             No More Copium
           </Link>
           <div className="flex items-center gap-1">
-            <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-              Client Mode
-            </span>
+            {account.isPreview && (
+              <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                Client Preview
+              </span>
+            )}
             <ChatButton />
             <SettingsMenu />
           </div>

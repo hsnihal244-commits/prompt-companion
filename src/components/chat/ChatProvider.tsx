@@ -5,7 +5,7 @@ import { useAccount } from "@/components/account/AccountProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAccount } from "@/lib/cloud-accounts";
-import { type ChatUnreadSummary, fetchChatUnreadSummary } from "@/lib/chat";
+import { type ChatUnreadSummary, fetchChatUnreadSummary, fetchCoachAccount } from "@/lib/chat";
 
 const EMPTY_SUMMARY: ChatUnreadSummary = {
   unreadMessages: 0,
@@ -114,7 +114,8 @@ async function showIncomingToast({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   try {
-    const sender = await fetchAccount(senderId);
+    const sender =
+      accountRole === "coach" ? await fetchAccount(senderId) : await fetchCoachAccount();
     let clientId = accountRole === "coach" ? senderId : undefined;
     if (accountRole === "coach" && threadId) {
       const { data } = await supabase

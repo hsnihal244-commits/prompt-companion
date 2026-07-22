@@ -87,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "No More Copium" },
       {
         name: "description",
-        content: "Workout programming for coaches and clients.",
+        content: "Personalized workout programming and progress tracking.",
       },
       { name: "application-name", content: "No More Copium" },
       { name: "apple-mobile-web-app-title", content: "No More Copium" },
@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "No More Copium" },
       {
         property: "og:description",
-        content: "Workout programming for coaches and clients.",
+        content: "Personalized workout programming and progress tracking.",
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "No More Copium" },
