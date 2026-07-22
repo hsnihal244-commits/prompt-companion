@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as AccessRouteImport } from './routes/access'
@@ -45,6 +46,11 @@ import { Route as ClientProgramsProgramIdWorkoutsWorkoutIdRouteImport } from './
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdIndexRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId.index'
 import { Route as CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRouteImport } from './routes/coach.programs.$programId.workouts.$workoutId.preview'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoachRoute = CoachRouteImport.update({
   id: '/coach',
   path: '/coach',
@@ -238,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/access': typeof AccessRoute
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/client/chat': typeof ClientChatRoute
   '/client/dashboard': typeof ClientDashboardRoute
   '/client/program': typeof ClientProgramRouteWithChildren
@@ -275,6 +282,7 @@ export interface FileRoutesByTo {
   '/access': typeof AccessRoute
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/client/chat': typeof ClientChatRoute
   '/client/dashboard': typeof ClientDashboardRoute
   '/client/workout-history': typeof ClientWorkoutHistoryRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/access': typeof AccessRoute
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/client/chat': typeof ClientChatRoute
   '/client/dashboard': typeof ClientDashboardRoute
   '/client/program': typeof ClientProgramRouteWithChildren
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/access'
     | '/client'
     | '/coach'
+    | '/onboarding'
     | '/client/chat'
     | '/client/dashboard'
     | '/client/program'
@@ -380,6 +390,7 @@ export interface FileRouteTypes {
     | '/access'
     | '/client'
     | '/coach'
+    | '/onboarding'
     | '/client/chat'
     | '/client/dashboard'
     | '/client/workout-history'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/access'
     | '/client'
     | '/coach'
+    | '/onboarding'
     | '/client/chat'
     | '/client/dashboard'
     | '/client/program'
@@ -446,10 +458,18 @@ export interface RootRouteChildren {
   AccessRoute: typeof AccessRoute
   ClientRoute: typeof ClientRouteWithChildren
   CoachRoute: typeof CoachRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/coach': {
       id: '/coach'
       path: '/coach'
@@ -886,6 +906,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccessRoute: AccessRoute,
   ClientRoute: ClientRouteWithChildren,
   CoachRoute: CoachRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
