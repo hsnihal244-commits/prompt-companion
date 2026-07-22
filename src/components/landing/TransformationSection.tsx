@@ -37,7 +37,7 @@ export function TransformationSection({
 
   return (
     <section
-      className="landing-transformation-section relative h-full min-h-[100dvh] overflow-hidden bg-black"
+      className="landing-transformation-section relative h-full min-h-0 overflow-hidden bg-black"
       aria-hidden={!active}
     >
       <div className="absolute inset-x-0 top-0 h-[61%] overflow-hidden bg-[#0b0b0b]">
