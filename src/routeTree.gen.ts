@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as ClientRouteImport } from './routes/client'
+import { Route as AccessRouteImport } from './routes/access'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachProgramsRouteImport } from './routes/coach.programs'
 import { Route as CoachLibraryRouteImport } from './routes/coach.library'
@@ -52,6 +53,11 @@ const CoachRoute = CoachRouteImport.update({
 const ClientRoute = ClientRouteImport.update({
   id: '/client',
   path: '/client',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessRoute = AccessRouteImport.update({
+  id: '/access',
+  path: '/access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -229,6 +235,7 @@ const CoachProgramsProgramIdWorkoutsWorkoutIdPreviewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/access': typeof AccessRoute
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/chat': typeof ClientChatRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/access': typeof AccessRoute
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/chat': typeof ClientChatRoute
@@ -293,6 +301,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/access': typeof AccessRoute
   '/client': typeof ClientRouteWithChildren
   '/coach': typeof CoachRouteWithChildren
   '/client/chat': typeof ClientChatRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/access'
     | '/client'
     | '/coach'
     | '/client/chat'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/access'
     | '/client'
     | '/coach'
     | '/client/chat'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/access'
     | '/client'
     | '/coach'
     | '/client/chat'
@@ -431,6 +443,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccessRoute: typeof AccessRoute
   ClientRoute: typeof ClientRouteWithChildren
   CoachRoute: typeof CoachRouteWithChildren
 }
@@ -449,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/client'
       fullPath: '/client'
       preLoaderRoute: typeof ClientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/access': {
+      id: '/access'
+      path: '/access'
+      fullPath: '/access'
+      preLoaderRoute: typeof AccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -863,6 +883,7 @@ const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccessRoute: AccessRoute,
   ClientRoute: ClientRouteWithChildren,
   CoachRoute: CoachRouteWithChildren,
 }
