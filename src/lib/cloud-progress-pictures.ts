@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json, Tables } from "@/integrations/supabase/types";
-import { progressPictureStorage } from "./progress-picture-storage-client";
 import {
   createProgressBatchId,
   type ProcessedProgressPicture,
@@ -39,7 +38,7 @@ export async function fetchProgressPictureBatches(
   const paths = pictures.map((picture) => picture.storage_path);
   const signedUrls = new Map<string, string>();
   if (paths.length > 0) {
-    const { data: signedRows, error: signedError } = await progressPictureStorage.storage
+    const { data: signedRows, error: signedError } = await supabase.storage
       .from(PROGRESS_PICTURES_BUCKET)
       .createSignedUrls(paths, SIGNED_URL_SECONDS);
     if (signedError) throw signedError;
@@ -188,7 +187,7 @@ async function uploadProgressPictureObject({
   body.append("batchId", batchId);
   body.append("pictureId", picture.id);
   body.append("file", picture.blob, `${picture.id}.webp`);
-  const { data, error } = await progressPictureStorage.functions.invoke("progress-picture-media", {
+  const { data, error } = await supabase.functions.invoke("progress-picture-media", {
     body,
   });
   if (error) throw new Error(`Progress picture upload failed: ${error.message}`);
@@ -204,7 +203,7 @@ async function cleanupProgressPictureObjects({
   clientId: string;
   paths: string[];
 }): Promise<void> {
-  const { error } = await progressPictureStorage.functions.invoke("progress-picture-media", {
+  const { error } = await supabase.functions.invoke("progress-picture-media", {
     body: { action: "cleanup", clientId, paths },
   });
   if (error) throw error;

@@ -44,7 +44,7 @@ export function CoachDashboard() {
             <Users className="mx-auto h-7 w-7 text-muted-foreground" aria-hidden="true" />
             <h3 className="mt-3 text-sm font-medium text-foreground">No clients yet</h3>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              Create a Client account from the account picker to see it here.
+              New clients appear here after they create an account with Google.
             </p>
           </div>
         ) : (

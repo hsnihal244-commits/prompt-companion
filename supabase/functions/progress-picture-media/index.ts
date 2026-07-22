@@ -16,15 +16,13 @@ Deno.serve(async (request) => {
   try {
     const url = Deno.env.get("SUPABASE_URL");
     const secretKey = getSecretKey();
-    if (!url || !secretKey) throw new Error("Cloud storage credentials are unavailable.");
+    if (!url || !secretKey) throw new HttpError("Cloud storage credentials are unavailable.", 503);
 
-    const database = createClient(url, secretKey, {
-      global: { fetch: createDatabaseFetch(secretKey) },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const database = createDatabaseClient(url, secretKey);
     const storage = createClient(url, secretKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    const authUserId = await requireAuthenticatedUser(database, request);
 
     const contentType = request.headers.get("content-type") ?? "";
     if (contentType.includes("multipart/form-data")) {
@@ -45,9 +43,10 @@ Deno.serve(async (request) => {
         return json({ error: "Only WebP images are accepted" }, 415);
       }
       const bytes = new Uint8Array(await file.arrayBuffer());
-      if (!isWebP(bytes))
+      if (!isWebP(bytes)) {
         return json({ error: "The uploaded file is not a valid WebP image" }, 415);
-      await requireClient(database, clientId);
+      }
+      await requireOwnedClient(database, clientId, authUserId);
 
       const path = storagePath(clientId, batchId, pictureId);
       const { error } = await storage.storage.from(BUCKET).upload(path, bytes, {
@@ -67,7 +66,7 @@ Deno.serve(async (request) => {
     if (body.action !== "cleanup") return json({ error: "Invalid action" }, 400);
     if (typeof body.clientId !== "string") return json({ error: "Client ID is required" }, 400);
     validateUuid(body.clientId, "client ID");
-    await requireClient(database, body.clientId);
+    await requireOwnedClient(database, body.clientId, authUserId);
     if (!Array.isArray(body.paths) || body.paths.length < 1 || body.paths.length > 6) {
       return json({ error: "Cleanup requires between 1 and 6 paths" }, 400);
     }
@@ -82,9 +81,52 @@ Deno.serve(async (request) => {
     return json({ removed: paths.length });
   } catch (error) {
     console.error("Progress-picture media request failed", error);
-    return json({ error: error instanceof Error ? error.message : "Unexpected upload error" }, 400);
+    const status = error instanceof HttpError ? error.status : 400;
+    return json(
+      { error: error instanceof Error ? error.message : "Unexpected upload error" },
+      status,
+    );
   }
 });
+
+async function requireAuthenticatedUser(
+  database: DatabaseClient,
+  request: Request,
+): Promise<string> {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) throw new HttpError("Authentication required.", 401);
+  const accessToken = authorization.slice("Bearer ".length).trim();
+  if (!accessToken || accessToken.split(".").length !== 3) {
+    throw new HttpError("A valid session is required.", 401);
+  }
+  const { data, error } = await database.auth.getUser(accessToken);
+  if (error || !data.user) throw new HttpError("Your session is invalid or expired.", 401);
+  return data.user.id;
+}
+
+async function requireOwnedClient(
+  database: DatabaseClient,
+  clientId: string,
+  authUserId: string,
+): Promise<void> {
+  const { data, error } = await database
+    .from("app_accounts")
+    .select("id")
+    .eq("id", clientId)
+    .eq("auth_user_id", authUserId)
+    .eq("role", "client")
+    .maybeSingle();
+  if (error || !data) throw new HttpError("This Client account is not yours.", 403);
+}
+
+type DatabaseClient = ReturnType<typeof createDatabaseClient>;
+
+function createDatabaseClient(url: string, secretKey: string) {
+  return createClient(url, secretKey, {
+    global: { fetch: createDatabaseFetch(secretKey) },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 function getSecretKey(): string | undefined {
   const standard = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -111,19 +153,6 @@ function createDatabaseFetch(secretKey: string): typeof fetch {
     headers.set("apikey", secretKey);
     return fetch(input, { ...init, headers });
   };
-}
-
-async function requireClient(
-  database: ReturnType<typeof createClient>,
-  clientId: string,
-): Promise<void> {
-  const { data, error } = await database
-    .from("app_accounts")
-    .select("id")
-    .eq("id", clientId)
-    .eq("role", "client")
-    .maybeSingle();
-  if (error || !data) throw new Error("Client account was not found");
 }
 
 function stringField(form: FormData, name: string): string {
@@ -157,6 +186,15 @@ function isWebP(bytes: Uint8Array): boolean {
 
 function ascii(bytes: Uint8Array, start: number, end: number): string {
   return String.fromCharCode(...bytes.slice(start, end));
+}
+
+class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
 }
 
 function json(value: unknown, status = 200): Response {

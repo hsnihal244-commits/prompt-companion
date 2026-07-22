@@ -21,13 +21,13 @@ const NAV_ITEMS: NavItem[] = [
 export function CoachShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { account, loading } = useAccount();
+  const { user, account, loading } = useAccount();
 
   useEffect(() => {
     if (!loading && account?.role !== "coach") {
-      void navigate({ to: "/", replace: true });
+      void navigate({ to: user && !account ? "/onboarding" : "/", replace: true });
     }
-  }, [account?.role, loading, navigate]);
+  }, [account, loading, navigate, user]);
   const isDashboardActive =
     pathname === "/coach/dashboard" || pathname.startsWith("/coach/clients/");
   const isProgramsActive =

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { type AppAccount, fetchAccounts } from "./cloud-accounts";
+import { type AppAccount, fetchAccounts, fetchPublicCoachAccount } from "./cloud-accounts";
 
 export const MAX_CHAT_MESSAGE_LENGTH = 2000;
 
@@ -89,8 +89,7 @@ export async function fetchCoachChatInbox(coachId: string): Promise<CoachChatCon
 }
 
 export async function fetchCoachAccount(): Promise<AppAccount | null> {
-  const accounts = await fetchAccounts();
-  return accounts.find((account) => account.role === "coach") ?? null;
+  return fetchPublicCoachAccount();
 }
 
 export async function ensureChatThread(clientId: string): Promise<string> {
