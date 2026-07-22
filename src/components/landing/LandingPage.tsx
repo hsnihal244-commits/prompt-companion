@@ -1,12 +1,20 @@
+import { useCallback, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 import { useVerticalSectionPager } from "@/hooks/use-vertical-section-pager";
 import { RotatingHeadline } from "./RotatingHeadline";
+import { TransformationSection } from "./TransformationSection";
 
 const SECTION_COUNT = 3;
 
 export function LandingPage() {
-  const pager = useVerticalSectionPager(SECTION_COUNT);
+  const [transformationComplete, setTransformationComplete] = useState(false);
+  const canNavigate = useCallback(
+    (fromIndex: number, toIndex: number) =>
+      !(fromIndex === 1 && toIndex === 2 && !transformationComplete),
+    [transformationComplete],
+  );
+  const pager = useVerticalSectionPager(SECTION_COUNT, canNavigate);
 
   return (
     <main
@@ -18,11 +26,9 @@ export function LandingPage() {
     >
       <div ref={pager.trackRef} className="h-full will-change-transform">
         <HeroSection active={pager.index === 0} onContinue={() => pager.goTo(1)} />
-        <PlaceholderSection
+        <TransformationSection
           active={pager.index === 1}
-          eyebrow="Built around you"
-          title="A plan that ends the guessing."
-          body="Clear direction. Visible progress. No more pretending random effort is a strategy."
+          onTransformed={() => setTransformationComplete(true)}
           onContinue={() => pager.goTo(2)}
         />
         <FinalSection active={pager.index === 2} />
@@ -62,47 +68,6 @@ function HeroSection({ active, onContinue }: { active: boolean; onContinue: () =
         <ChevronDown className="landing-swipe-chevron h-5 w-5" aria-hidden="true" />
         <span className="text-[10px] font-medium uppercase tracking-[0.18em]">Swipe down</span>
       </button>
-    </section>
-  );
-}
-
-function PlaceholderSection({
-  active,
-  eyebrow,
-  title,
-  body,
-  onContinue,
-}: {
-  active: boolean;
-  eyebrow: string;
-  title: string;
-  body: string;
-  onContinue: () => void;
-}) {
-  return (
-    <section
-      className="relative flex h-full min-h-[100dvh] items-center bg-[#080808] px-6"
-      aria-hidden={!active}
-    >
-      <div className="mx-auto w-full max-w-xl">
-        <div className="h-px w-10 bg-red-500" />
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-red-500">
-          {eyebrow}
-        </p>
-        <h2 className="mt-3 text-[clamp(2.5rem,11vw,5.5rem)] font-semibold leading-[0.94] tracking-[-0.05em] text-white">
-          {title}
-        </h2>
-        <p className="mt-6 max-w-md text-base leading-7 text-white/55">{body}</p>
-        <button
-          type="button"
-          onClick={onContinue}
-          tabIndex={active ? 0 : -1}
-          className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:border-red-500 hover:bg-red-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-        >
-          Continue
-          <ChevronDown className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
     </section>
   );
 }

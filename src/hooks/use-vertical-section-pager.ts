@@ -5,7 +5,10 @@ const SWIPE_VELOCITY = 500;
 
 type Point = { y: number; time: number };
 
-export function useVerticalSectionPager(sectionCount: number) {
+export function useVerticalSectionPager(
+  sectionCount: number,
+  canNavigate?: (fromIndex: number, toIndex: number) => boolean,
+) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const indexRef = useRef(0);
@@ -78,13 +81,22 @@ export function useVerticalSectionPager(sectionCount: number) {
 
   const goTo = useCallback(
     (requestedIndex: number, velocity = 0) => {
-      const nextIndex = Math.max(0, Math.min(sectionCount - 1, requestedIndex));
+      const currentIndex = indexRef.current;
+      const singleStepRequest =
+        Math.abs(requestedIndex - currentIndex) > 1
+          ? currentIndex + Math.sign(requestedIndex - currentIndex)
+          : requestedIndex;
+      const nextIndex = Math.max(0, Math.min(sectionCount - 1, singleStepRequest));
+      if (nextIndex !== currentIndex && canNavigate && !canNavigate(currentIndex, nextIndex)) {
+        springTo(-currentIndex * viewportHeight());
+        return;
+      }
       indexRef.current = nextIndex;
       setIndexState(nextIndex);
       springTo(-nextIndex * viewportHeight(), velocity);
       window.requestAnimationFrame(() => viewportRef.current?.focus({ preventScroll: true }));
     },
-    [sectionCount, springTo, viewportHeight],
+    [canNavigate, sectionCount, springTo, viewportHeight],
   );
 
   useEffect(() => {
@@ -165,12 +177,6 @@ export function useVerticalSectionPager(sectionCount: number) {
     } else if (["ArrowUp", "PageUp"].includes(event.key)) {
       event.preventDefault();
       goTo(indexRef.current - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      goTo(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      goTo(sectionCount - 1);
     }
   };
 
