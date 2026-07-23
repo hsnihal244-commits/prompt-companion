@@ -17,10 +17,8 @@ export type Database = {
       app_accounts: {
         Row: {
           assigned_program_id: string | null
-          auth_user_id: string
           created_at: string
           id: string
-          is_preview: boolean
           name: string
           role: string
           updated_at: string
@@ -28,10 +26,8 @@ export type Database = {
         }
         Insert: {
           assigned_program_id?: string | null
-          auth_user_id: string
           created_at?: string
           id?: string
-          is_preview?: boolean
           name: string
           role: string
           updated_at?: string
@@ -39,10 +35,8 @@ export type Database = {
         }
         Update: {
           assigned_program_id?: string | null
-          auth_user_id?: string
           created_at?: string
           id?: string
-          is_preview?: boolean
           name?: string
           role?: string
           updated_at?: string
@@ -380,18 +374,6 @@ export type Database = {
         Returns: {
           client_id: string
           unread_messages: number
-        }[]
-      }
-      get_coach_profile: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          assigned_program_id: string | null
-          created_at: string
-          id: string
-          is_preview: boolean
-          name: string
-          role: string
-          username: string
         }[]
       }
       get_or_create_chat_thread: {
