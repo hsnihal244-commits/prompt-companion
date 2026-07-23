@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -23,11 +24,11 @@ export function GoogleAuthButton({ className, tabIndex }: GoogleAuthButtonProps)
       }
 
       const redirectTo = new URL("/onboarding", window.location.origin).toString();
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: redirectTo,
       });
-      if (oauthError) throw oauthError;
+      if (result.error) throw result.error;
+      if (!result.redirected) window.location.assign("/onboarding");
     } catch (nextError) {
       console.error("Google authentication could not start", nextError);
       setError("Google sign-in could not start. Please try again.");
