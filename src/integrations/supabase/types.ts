@@ -364,6 +364,14 @@ export type Database = {
         Args: { p_batch_id: string; p_client_id: string; p_pictures: Json }
         Returns: string
       }
+      can_access_chat_thread: {
+        Args: { p_thread_id: string }
+        Returns: boolean
+      }
+      can_read_client_account: {
+        Args: { p_client_id: string }
+        Returns: boolean
+      }
       create_progress_picture_batch: {
         Args: {
           p_batch_id: string
@@ -383,9 +391,9 @@ export type Database = {
         }[]
       }
       get_coach_profile: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
-          assigned_program_id: string | null
+          assigned_program_id: string
           created_at: string
           id: string
           is_preview: boolean
@@ -398,6 +406,7 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: string
       }
+      is_app_coach: { Args: never; Returns: boolean }
       is_progress_picture_storage_path: {
         Args: { object_name: string }
         Returns: boolean
@@ -406,6 +415,7 @@ export type Database = {
         Args: { p_account_id: string; p_client_id: string }
         Returns: undefined
       }
+      owns_app_account: { Args: { p_account_id: string }; Returns: boolean }
       send_chat_message: {
         Args: {
           p_body: string
